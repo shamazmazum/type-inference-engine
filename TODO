@@ -1,0 +1,6 @@
+* Add literals (done)
+* Add backward inference (done)
+* Add support for special operators like if, let and for
+* Rework traversal of graphs (partially done)
+* More comprehensible control flow graphs (use PARALLEL assignment
+  statements) (do I need this?).
