@@ -11,6 +11,7 @@
    #:incorrect-definition
    #:arity-error
    #:unknown-function
+   #:unknown-literal
    #:fndb-entry-exists
 
    ;; Graphs
@@ -21,16 +22,16 @@
    #:type-node-name
    #:type-node-documentation
    #:type-node-direct-subtypes
+
    #:type-node-order
    #:ge #:le
-
    #:find-type-node
    #:flatten-type-graph
    #:check-type-system
    #:join
    #:meet
-   #:type-subtype-p
    #:types-intersect-p
+   #:print-graphviz-representation
 
    ;; Defknown facility
    #:statement

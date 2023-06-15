@@ -61,6 +61,28 @@ with the type of that literal or NIL otherwise."
 (sera:-> parse-code (t &optional list boolean)
          (values (or control-flow-node null) symbol &optional))
 (defun parse-code (code &optional literal-initializers recursive-p)
+  "Parse an expression @c(code) and construct a control flow
+graph. @c(Literal-initializers) is an associative list which contains
+predicates as keys and initializer functions as values. When
+@c(parse-code) sees a term of the expression, it runs predicates in
+@c(literal-initializers) (in the order of appearance) on that term. If
+a predicate returns @c(T) then that term is considered as a literal
+and the corresponding initializer function is used to initialize a
+constant variable with a value of type of the literal. For example:
+@begin[lang=lisp](code)
+(parse-code '(+ x 3)) ; => Signals UNKNOWN-LITERAL
+(parse-code
+ '(+ x 3)
+ (list
+  (cons #'intergerp 'init/integer)))
+;; =>
+;; #<Node (#<STATEMENT VAR254 ← (+ X CONST253) {1010A14543}>) {1010A14563}>
+;; #:VAR254
+@end(code)
+
+This function returns a control flow graph and the name of a variable
+where the result of expression is stored after evaluation of a
+statement."
   (let ((literal-initializer (literal-initializer code literal-initializers)))
     (cond
       (literal-initializer
@@ -128,7 +150,8 @@ with the type of that literal or NIL otherwise."
 (sera:-> flat-control-flow-graph (control-flow-node)
          (values list &optional))
 (defun flat-control-flow-graph (node)
-  "Convert control flow graph to convenient flat representation"
+  "Convert control flow graph returned from @c(parse-code) to a flat
+representation understandable by @c(infer-types)."
   (let* ((statements-list
           (mapcar #'control-flow-node-statements
                   (flatten-control-flow node)))

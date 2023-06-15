@@ -1,0 +1,609 @@
+@begin[ref=index](section)
+   @title(Overview)
+   This is a simple type inference engine based on the paper by Marc Kaplan and
+   Jeffrey Ullman (see below). This engine features custom type systems based on
+   subtyping, a simple language based on S-expressions and allows you to create
+   basic functions to start type inferece with. There are some examples
+   below. These examples use a toy type system and a set of known functions from
+   @c(type-inference-engine/example) package. Do not be afraid if you do not
+   understand them, they will be explained in futher sections.
+
+   @begin[lang=lisp](code)
+(defpackage examples
+  (:use #:cl)
+  (:local-nicknames (#:tie    #:type-inference-engine)
+                    (#:tie/ex #:type-inference-engine/example)))
+(in-package :examples)
+
+(tie/ex:infer-types '(+ x (sin y)))
+;; =>
+;; #((Y . #<TIE:TYPE-NODE NUMBER {10286E6453}>)
+;;   (#:VAR4955 . #<TIE:TYPE-NODE NUMBER {10286E6453}>)
+;;   (X . #<TIE:TYPE-NODE NUMBER {10286E6453}>)
+;;   (#:VAR4954 . #<TIE:TYPE-NODE NUMBER {10286E6453}>))
+;; #:VAR4955
+;;
+;; The first value is a mapping from variables used in an expression
+;; '(+ x (sin y)) (later: the expression) to their corresponding
+;; types. Variables which begin with #:VAR are intermediate variables
+;; which do not appear in the expression explicitly. The second value
+;; is a name of variable which contains the result of evaluation of
+;; the expression. All in all, the output of TIE/EX:INFER-TYPES can be
+;; read as: the expression takes two arguments of type NUMBER and
+;; returns a result of type NUMBER.
+
+(tie/ex:infer-types '(1+ (sin (floor y))))
+;; =>
+;; #((Y . #<TIE:TYPE-NODE NUMBER {10286E6453}>)
+;;   (#:VAR4956 . #<TIE:TYPE-NODE INTEGER {10286E6413}>)
+;;   (#:VAR4958 . #<TIE:TYPE-NODE FLOAT {10286E6433}>)
+;;   (#:VAR4957 . #<TIE:TYPE-NODE FLOAT {10286E6433}>))
+;; #:VAR4958
+;;
+;; Here Y becomes rounded with FLOOR before SIN is calculated. As a
+;; result the most narrow type of (SIN (FLOOR Y)) is FLOAT (which is a
+;; type for real numbers in floating point representation), not NUMBER
+;; (which is a type for numbers in general). Hence the whole
+;; expression takes an argument of type NUMBER and returns a FLOAT.
+
+(tie/ex:infer-types '(+ (length y) (- x (floor (elt y x)))))
+;; =>
+;; #((#:VAR4963 . #<TIE:TYPE-NODE NUMBER {10286E6453}>)
+;;   (X . #<TIE:TYPE-NODE INTEGER {10286E6413}>)
+;;   (#:VAR4964 . #<TIE:TYPE-NODE INTEGER {10286E6413}>)
+;;   (Y . #<TIE:TYPE-NODE SEQUENCE {1037ADC713}>)
+;;   (#:VAR4966 . #<TIE:TYPE-NODE INTEGER {10286E6413}>)
+;;   (#:VAR4962 . #<TIE:TYPE-NODE INTEGER {10286E6413}>)
+;;   (#:VAR4965 . #<TIE:TYPE-NODE INTEGER {10286E6413}>))
+;; #:VAR4966
+;;
+;; Here the most narrow type for Y is a SEQUENCE (one dimensional array-like
+;; collection). X can only be an INTEGER as it serves a role of an index into
+;; Y in (ELT Y X). The result has a type INTEGER, because both LENGTH and FLOOR
+;; return an INTEGER.
+
+(tie/ex:infer-types '(+ x (length x)))
+;; =>
+;; #((#:VAR4968 . #<TIE:TYPE-NODE NIL {10286E6313}>)
+;;   (X . #<TIE:TYPE-NODE NIL {10286E6313}>)
+;;   (#:VAR4967 . #<TIE:TYPE-NODE NIL {10286E6313}>))
+;; #:VAR4968
+;;
+;; The expression (+ x (length x)) maps values of type NIL to NIL,
+;; i.e. there are no such values for which the expression can be
+;; evaluated. NIL is a special type so that ∄x: x ∈ NIL. This is
+;; because X cannot be a number and a sequence at the same time.
+
+(tie/ex:infer-types '(tie/ex:bool x (1+ (floor y)) (sin z)))
+;; =>
+;; #((Z . #<TIE:TYPE-NODE NUMBER {10286E6453}>)
+;;   (Y . #<TIE:TYPE-NODE NUMBER {10286E6453}>)
+;;   (#:VAR4969 . #<TIE:TYPE-NODE INTEGER {10286E6413}>)
+;;   (#:VAR4972 . #<TIE:TYPE-NODE NUMBER {10286E6453}>)
+;;   (X . #<TIE:TYPE-NODE BOOLEAN {1037EFF223}>)
+;;   (#:VAR4970 . #<TIE:TYPE-NODE INTEGER {10286E6413}>)
+;;   (#:VAR4971 . #<TIE:TYPE-NODE NUMBER {10286E6453}>))
+;; #:VAR4972
+;;
+;; This expression take a BOOLEAN x and returns a value of type
+;; NUMBER. BOOL function is like IF in Common Lisp with exception that
+;; BOOL evaluates all its arguments.
+
+(tie/ex:infer-types '(tie/ex:bool (numberp (1+ x)) 3.2 4))
+;; =>
+;; #((X . #<TIE:TYPE-NODE NUMBER {10286E6453}>)
+;;   (#:VAR4973 . #<TIE:TYPE-NODE NUMBER {10286E6453}>)
+;;   (#:VAR4977 . #<TIE:TYPE-NODE FLOAT {10286E6433}>)
+;;   (#:VAR4974 . #<TIE:TYPE-NODE TRUE {1037F5D7B3}>)
+;;   (#:CONST4975 . #<TIE:TYPE-NODE FLOAT {10286E6433}>)
+;;   (#:CONST4976 . #<TIE:TYPE-NODE INTEGER {10286E6413}>))
+;; #:VAR4977
+;;
+;; (1+ X) have to be a number, so the result is of type FLOAT.
+   @end(code)
+   For more understanding what is going on here, visit @ref[id=lang](language of
+   expressions) and @ref[id=type-system](type system) sections.
+
+   Reference to the paper: Marc A. Kaplan and Jeffrey D. Ullman. 1978. A general
+   scheme for the automatic inference of variable types. In Proceedings of the
+   5th ACM SIGACT-SIGPLAN symposium on Principles of programming languages (POPL
+   '78). Association for Computing Machinery, New York, NY, USA,
+   60–75. https://doi.org/10.1145/512760.512768
+@end(section)
+
+@begin[ref=lang](section)
+   @title(Language of expressions)
+   The inference engine infers types for expressions in the following language:
+   @begin(code)
+   expression = literal | variable | funcall
+   funcall    = "(" + function + expression* + ")"
+   variable   = symbol
+   function   = symbol
+   @end(code)
+   Here @c(|) means non-ambiguous choice operator, i.e. if an expression is a
+   literal, it cannot be a variable of a function call. To determine what is a
+   literal and what is not, a sequence of tests is performed on each term before
+   it is classified as either a variable or a function call. For more
+   information look at @c(parse-code) function in the @ref[id=api](API)
+   section. For example, both @c((+ (sin x) (- y z))) and @c((foo x y (- x y)))
+   are expressions, but @c(((x y) (y x))), @c(((foo x))) and @c((foo x) y) are
+   not (the latter is actualy two correct expressions). @b(NB): There are no
+   special forms as @c(let) or @c(if) in the language yet.
+
+   An example provided with this engine in the system
+   @c(type-inference-engine/example) has the following defined literals:
+   @begin(list)
+   @item(Integers are all literals recognized by Common Lisp as such
+   e.g. @c(1), @c(2), @c(3) etc.)
+   @item(Floats are all literals recognized by Common Lisp as such
+   e.g. @c(1.0), @c(2.32), @c(3.2f5), @c(3.43d0) etc.)
+   @item(@c(T) (as a boolean) and @c(NIL) (as a boolean, a list or @c(NULL)).)
+   @item(Cons cells, e.g. @c((3 . 5)), @c((nil . t)). Lists are also recognized
+   as conses.)
+   @item(Vectors, e.g. @c(#(1 2 3)).)
+   @item(Multidimensional arrays, e.g. @c(#2a((1) (2) (3))).)
+   @end(list)
+
+   It also contains the following known functions:
+   @begin(list)
+   @item(@c(1+), @c(1-): Take a numeric argument and return it incremented or
+   decremented by 1 (as in Common Lisp).)
+   @item(@c(sin), @c(cos): Take a numeric argument and return its sine or cosine
+   (as in Common Lisp).)
+   @item(@c(length): Take a sequence (read the next section if you do not know
+   what it is) and return its length as an integer (as in Common Lisp).)
+   @item(@c(+), @c(-): Add or subtract two numeric arguments and return a
+   number (as in Common Lisp, but these functions are two-args).)
+   @item(@c(floor), @c(ceiling): Take a numeric argument and round it (return an
+   integer).)
+   @item(@c(elt): Take a sequence and an index (integer) and return an element
+   from that sequence.)
+   @item(@c(cons): Constructor for cons cells.)
+   @item(@c(numberp): Take a value and return either @c(T) (if the value is a
+   number) or @c(NIL) (otherwise).)
+   @item(@c(bool): Take a boolean and any two values @c(x) and @c(y). Return the
+   @c(x) if the boolean is @c(T) and @c(y) otherwise. Note, that this is an
+   ordinary function, so it evaluates both @c(x) and @c(y) before giving a
+   result.)
+   @end(list)
+
+   Unlike Common Lisp, all functions in this language return exactly one
+   value. Note that these functions are not mandatory for the engine and can be
+   replaced with your own set. Also note that these functions are not
+   evaluated. E.g. inferring types for an expression @c((sin x)) does not
+   actually evaluate @c(x) or @c((sin x)). You do not have to bind @c(x) with
+   anything. As the last important notice: there is no generalized booleans in
+   the example language (but you can redefine this behaviour): the first
+   argument of @c(bool) @b(must) be either @c(T) or @c(NIL).
+
+   An expression is internally represented as a directed graph of parallel
+   assignment statements in the following form:
+   \((x_1, x_2, \dots, x_m) \leftarrow (f_1 (y_{1_1}, y_{1_2}, \dots,
+   y_{1_{n_1}}), \dots, f_m (y_{m_1}, y_{m_2}, \dots, y_{m_{n_m}})) \)
+   That means that a statement contains \(m\) assignments. When a statement is
+   executed \(m\) functions from \(f_1\) to \(f_m\) are evaluated with values in
+   corresponding variables \(y_i\) as arguments and their results are assigned to
+   (all distinct) variables \(x_i\). For example an expression @c((sin (1+ y)))
+   is transformed in something like following:
+   @begin(code)
+   1: (y, v1, v2) ← initialize variables with some safe values
+   2: v1 ← y + 1
+   3: v2 ← sin v1
+   @end(code)
+   with edges \(1 \rightarrow 2\), \(2 \rightarrow 3\),
+   \(3 \rightarrow 1\). Note, that the last statement is always connected to the
+   first. This knowleadge about internal representation will be useful later
+   when we will read a @ref[id=inference](section) about type inference.
+@end(section)
+
+@begin[ref=type-system](section)
+   @title(Type systems)
+   Let \( T \) be a set of all possible values which may appear in our language
+   of expressions. For example, @c(1), @c("Hello world"), @c('(1 2 3)) all may
+   belong to \( T \). A @i(type) as @c(type-inference-engine) understands it is
+   a subset of \( T \). A @i(type system) \( I \) is a set of all types.
+   \( I \) is a partially ordered set: it is said that for \(t_1, t_2 \in
+   I \), \(t_1 \le t_2 \) if \( t_1 \subset t_2 \) and \( t_1 = t_2 \) if \( t_1
+   \subset t_2 \) and \( t_2 \subset t_1 \). \( I \) is also a lattice: for each
+   \( t_1, t_2 \in I \) there are unique meet \( t_1 \wedge t_2 \in I\) and join
+   \(t_1 \vee t_2 \in I \).
+
+   Join is defined as the smallest type such as \( t_1 \subset t_1 \vee t_2 \)
+   and \( t_2 \subset t_1 \vee t_2 \) and meet is the biggest type such as \(
+   t_1 \wedge t_2 \subset t_1 \) and \( t_1 \wedge t_2 \subset t_2 \). To form a
+   lattice from a set of disjoint types, we include a type \( T \) (all possible
+   values) and a type \( \emptyset \) (no values belong to this type) in our type
+   system. So if \(t_1 \cap t_2 = \emptyset \), then \(t_1 \vee t_2 = T \) and
+   \(t_1 \wedge t_2 = \emptyset \).
+
+   The type system \( I \) can be represented as a directed graph. For example,
+   in the example package @c(type-inference-engine/example) it is defined as
+   follows: @image[src=types.png]()
+
+   Here a connection from @c(ARRAY) to @c(VECTOR) means that @c(VECTOR) ⊂
+   @c(ARRAY). A description of types follows:
+   @begin(list)
+   @item(@c(T) is a type \(T\) which contains all possible values in the
+   program.)
+   @item(@c(ARRAY) is a type for arrays of any dimensionality, e.g. @c(#(1 2
+   3)), @c(#2a((1 2 3) (1 2 3))).)
+   @item(@c(SEQUENCE) is a type for collections which can be indexed by a
+   non-negative integer, e.g. @c(#(1 2 3)), @c('(1 2 3)).)
+   @item(@c(VECTOR) is a type for one-dimensional arrays, e.g. @c(#(1 2 3)).)
+   @item(@c(LIST) is a type for lists. List is either a cons cell or a value
+   @c(NIL). Examples: @c(NIL), @c('(1 2 3)), @c('(1 2 . 3)).)
+   @item(@c(BOOLEAN) is a type which contains two values: @c(NIL) and @c(T).)
+   @item(@c(NUMBER) is a type for any number, possibly a complex number.)
+   @item(@c(CONS) is a type for pairs of values, or cons cells, e.g. @c('(1
+   . 4)).)
+   @item(@c(NULL) contains only one value: @c(NIL).)
+   @item(@c(TRUE) contains only one value: @c(T).)
+   @item(@c(INTEGER) contains integers.)
+   @item(@c(FLOAT) contains floats (in any representation).)
+   @item(@c(NIL) is a bottom type \( \emptyset \).)
+   @end(list)
+
+   @b(NB): As a limitation of the engine, the bottom type must have a name
+   @c(NIL). There is no other limitations in the type naming. For example, you
+   can name \( T \) as @c(TOP) instead of @c(T). Here I just follow a convention
+   used in Common Lisp.
+
+   @b(NB): You must keep in mind the difference between a @i(value ) @c(NIL) and
+   a @i(type ) @c(NIL). The former is a value of types @c(NULL), @c(BOOLEAN),
+   @c(LIST), @c(SEQUENCE) and @c(T) and the latter is a type which has no values
+   in it.
+
+   @b(NB): This kind of type systems is very close to what we have in Common
+   Lisp with exception that there is no compond types and hence no set-theoretic
+   types like @c(not), @c(and) and @c(or).
+
+   Now let's define our own type system, which contains types @c(NIL),
+   @c(INTEGER), @c(REAL) and @c(T) and some wrapper functions for working with
+   that type system:
+   @begin[lang=lisp](code)
+(defpackage tie-example
+  (:use #:cl)
+  (:local-nicknames (#:tie  #:type-inference-engine)
+                    (#:sera #:serapeum))
+  (:export #:*my-system*
+           #:type-node-order
+           #:join
+           #:meet))
+(in-package :tie-example)
+
+(defparameter *my-system*
+  (let* ((bottom   (tie:type-node nil "The bottom type. No value belongs to this type"
+                                  ;; No subtypes
+                                  nil))
+         (integer  (tie:type-node 'integer "A type for integer numbers"
+                                  ;; NIL is the only subtype
+                                  (list bottom)))
+         (real     (tie:type-node 'real "A type for real numbers"
+                                  ;; INTEGERs are real numbers. INTEGER is a direct
+                                  ;; subtype of REAL
+                                  (list integer)))
+         (string   (tie:type-node 'string "A type for strings"
+                                  (list bottom)))
+         (top      (tie:type-node t "The top type"
+                                  ;; Two direct subtypes
+                                  (list real string))))
+    (tie:check-type-system top)))
+
+(defun type-op (function)
+  (lambda (type-name-1 type-name-2)
+    (funcall function *my-system*
+             (tie:find-type-node type-name-1 *my-system*)
+             (tie:find-type-node type-name-2 *my-system*))))
+             
+(sera:defalias type-node-order (type-op #'tie:type-node-order))
+(sera:defalias join (type-op #'tie:join))
+(sera:defalias meet (type-op #'tie:meet))
+   @end(code)
+
+   Now, you can evaluate some relations between types:
+   @begin[lang=lisp](code)
+CL-USER> (tie-example:type-node-order nil 'real)
+:LT
+CL-USER> (tie-example:type-node-order 'integer 'real)
+:LT
+CL-USER> (tie-example:type-node-order 'integer 'string)
+NIL
+CL-USER> (tie-example:type-node-order 'string nil)
+:GT
+CL-USER> (tie-example:type-node-order nil nil)
+:EQ
+CL-USER> (tie-example:join 'integer 'real)
+#<TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {100DBB6283}>
+CL-USER> (tie-example:meet 'integer 'real)
+#<TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {100DBB6263}>
+CL-USER> (tie-example:join 'integer 'string)
+#<TYPE-INFERENCE-ENGINE:TYPE-NODE T {100DBB62C3}>
+CL-USER> (tie-example:meet 'integer 'string)
+#<TYPE-INFERENCE-ENGINE:TYPE-NODE NIL {100DBB6243}>
+   @end(code)
+@end(section)
+
+@begin(section)
+   @title(Known functions)
+   Now, suppose you have defined your type system \( I \) with properties
+   described in the previous section. Now, you want to define some basic
+   primitives to work with. Remember, the part of @ref[id=lang](this section)
+   which describes known functions and literals is relevant for an example in
+   the @c(type-inference-engine/example) package/system and you may wish to
+   define your own set of functions.
+
+   Suppose you have a function \( f \) which takes \( n \) arguments. To add
+   this function to your language as a known primitive you must define \( n + 1
+   \) supplementary functions \(T^f_0, T^f_1, \dots, T^f_n \). Here is their
+   meaning:
+   @begin(list)
+   @item(\( T^f_0 \) takes \( n \) arguments \( t_1, t_2, \dots, t_n \) and
+   returns the least type of a result of application of \(f\) to values of types
+   \( t_1, t_2, \dots, t_n \). For example, \( T^{1+}_0\) (@c(INTEGER)) may
+   be defined as @c(INTEGER) because @c(1+) maps integers to integers.)
+   @item(\( T^f_k \) takes \( n + 1 \) arguments \( t_0, t_1, \dots, t_k, \dots,
+   t_n \) and returns the least type \( t \) in a statement \( v_0 \leftarrow
+   f(v_1, \dots, v_k, \dots, v_n) \) such that \(t \le t_k\) and variables
+   \(v_i\) are bound to values of types \(t'_i\) after execution of that
+   statement, where \(t'_i = t_i\) if \(i \ne k\) and \(t'_i = t\)
+   otherwise. This can be hard to understand, but intuitively \(T^f_i, i>0\) are
+   used to narrow a type of \(i\)-th argument when a type of the result is known
+   and \(T^f_0\) is used to determine a type of the result. For example \(
+   T^{1+}_1\) (@c(INTEGER), @c(NUMBER)) may be defined as @c(INTEGER) and
+   \(T^{1+}_1\) (@c(SEQUENCE), @c(NUMBER)) is @c(NIL)).
+   @end(list)
+
+   Functions \(T^f_i\) must be monotonic with respect to all arguments to
+   guarantee execution of the type inference algorithm in finite time. An unary
+   function \(f\) is monotonic if for any \(x, y: x \le y \), \(f(x) \le f(y)\)
+   follows. To learn how to define known functions in @c(type-inference-engine)
+   look at @c(defknown) macro in @ref[id=api](API) section. Note, that you need
+   to be careful when defining \(T^f_i\) functions, but not @i(very) careful:
+   @c(defknown) will signal an error if you violate monotinicity of one of the
+   functions.
+
+   Being in our previously defined package, @c(tie-example), let's create a
+   database of known functions and add a function @c(1+) to it, which adds @c(1)
+   to its only argument:
+   @begin[lang=lisp](code)
+(defparameter *fndb* (tie:make-fndb *my-system*))
+(tie:defknown *fndb* *my-system* (1+)
+    ;; The next form defines some important bindings inside T_i
+    ;; functions. It says that a type of the result will be available in
+    ;; the variable RES and N can take integer values from 0 to a-1,
+    ;; where a is arity of the defined function. N correspond to the
+    ;; function T_{N+1}. In the case of 1+, we just need to define T₁
+    ;; and hence N is always 0 and can be ignored. TOP is just bound to
+    ;; *MY-SYSTEM*. X is a type of an argument of 1+.
+    ((x) (res top n))
+  ;; Bind some variables (on the left side) to needed types (on the right side)
+  ((real   . real)
+   (bottom . nil))
+  ;; This will be explained later
+  (:bottom-guard nil)
+  ;; Define T₀ function. The following form is an implicit cond form
+  (;; If we pass a value of type t ≤ REAL, then 1+ returns a value of
+   ;; type t
+   ((tie:le (tie:type-node-order top x real)) x)
+   ;; Now, if t ≥ REAL (i.e. T), then 1+ returns a value of type REAL
+   ((tie:ge (tie:type-node-order top x real)) real)
+   ;; Otherwise, 1+ returns a value of type BOTTOM (i.e. it does not
+   ;; return anything at all and, for example, signals an error or
+   ;; causes your PC to explode).
+   (t bottom))
+  ;; Here we define T₁. The following form is also an implicit cond.
+  ((t
+    ;; A type of an argument always can be narrowed to X ∧ RES ∧ REAL
+    (tie:meet top (tie:meet top res x) real))))
+   @end(code)
+
+   Here @c((:bottom-guard nil)) does not produce any effect, but if you replace
+   @c(nil) with a variable which is bound to the bottom type (in our case,
+   @c(bottom)), two other checks will be added to \(T_i\) functions. Firstly,
+   \(T_i\) functions will always check if any of its arguments is @c(bottom),
+   and if yes, they will immediately return @c(bottom). Secondly, after all
+   other cond cases are checked and none of them pass, \(T_i\) functions will
+   return @c(bottom). Setting @c((:bottom-guard bottom)) is a good practice and
+   saves you from writing boilerplate code and making errors. Let's add another
+   function, @c(floor), which takes a number and rounds it to a value of type
+   @c(INTEGER):
+   @begin[lang=lisp](code)
+(tie:defknown *fndb* *my-system* (floor) ((x) (res top n))
+  ;; Bind some variables to types which we need
+  ((real    . real)
+   (integer . integer)
+   (bottom  . nil))
+  (:bottom-guard bottom)
+  ;; Define T₀ function.
+  (;; The case x = BOTTOM is already checked by a bottom guard.
+   ;; Here if X intersects with REAL (i.e. X = INTEGER, REAL or T)
+   ;; then FLOOR returns a value of type INTEGER.
+   ((tie:types-intersect-p top x real) integer)
+   ;; All other cases (e.g. x = STRING) are covered by a bottom guard
+   )
+  ;; Define T₁.
+  (((tie:ge (tie:type-node-order top res integer))
+    ;; If a result is of type T, REAL or INTEGER, when narrow X to X ∧
+    ;; REAL
+    (tie:meet top x real))))
+   @end(code)
+
+   In the next section we will learn the problem solved by
+   @c(type-inference-engine) and see what can be done with our toy type system
+   and these two known functions.
+@end(section)
+
+@begin[ref=inference](section)
+   @title(Type inference problem)
+   Suppose you have an expression in our @ref[id=lang](Language of expressions)
+   which is internally translated to a graph of parallel assignment
+   statements. Let \(V\) be a set of variables which appear in all those
+   statements. A mapping \(V \rightarrow I \) maps variables \((v_1 \in V, v_2
+   \in V,\dots) \) to types of values bound to those variables \((t_1 \in I,
+   t_2 \in I,\dots) \) in some point of time during evaluation of our
+   expression. Suppose our execution graph has \(n\) vertices (statements), then
+   let \([V \rightarrow I]^n\) be a mapping from variables to types before
+   execution of all \(n\) statements in the graph. A mapping \([V \rightarrow
+   I]^n\) is called safe if for types \((t'_{1_m}, t'_{2_m}, \dots)\) of values
+   bound to variables \((v_1, v_2, \dots)\) during any possible control flow graph
+   execution before execution of any statement \(m\) holds the following:
+   \(t'_{1_m} \le t_{1_m}\), \(t'_{2_m} \le t_{2_m}\) etc. For example a mapping
+   \([v_1 \rightarrow T, v_2 \rightarrow T, \dots]^n\) is always safe. The
+   problem of type inference is to find a mapping \([V \rightarrow I]^n\) which
+   is safe and as narrow as possible.
+
+   When your type system and database of known functions are created, you can
+   start to infer types of expressions. Let's add a function @c(infer-types) to
+   our @c(tie-example) package:
+   @begin[lang=lisp](code)
+(defun infer-types (expression)
+  "Infer types in the expression using our type system and function
+database."
+  (multiple-value-bind (graph result-variable)
+      (tie:parse-code expression nil)
+    (let ((flat-graph (tie:flat-control-flow-graph graph)))
+      (values
+       (tie:infer-types *fndb* *my-system* flat-graph)
+       flat-graph
+       result-variable))))
+(export 'infer-types)
+   @end(code)
+
+   Here we give it a try:
+   @begin[lang=lisp](code)
+CL-USER> (tie-example:infer-types '(1+ x))
+#(#((#:VAR554 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}>)
+    (X . #<TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}>))
+  #((#:VAR554 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE T {1036B20BD3}>)
+    (X . #<TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}>)))
+((TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (1) (1) (#<TYPE-INFERENCE-ENGINE:STATEMENT VAR554 ← (INITIALIZE ) {102D5DCFC3}>
+                                                    #<TYPE-INFERENCE-ENGINE:STATEMENT X ← (INITIALIZE ) {102D5DCFE3}>))
+ (TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (0) (0) (#<TYPE-INFERENCE-ENGINE:STATEMENT VAR554 ← (1+ X) {102D5DCE93}>)))
+#:VAR554
+   @end(code)
+
+   Here the first returned value is our \([V \rightarrow I]^2\) mapping which
+   corresponds to two parallel assignment statements which are returned as the
+   second value. The third value is a variable which will hold the result of
+   @c((1+ x)). The first element of the first returned array is of interest
+   here. It is a mapping \(V \rightarrow I\) which corresponds to the fully
+   evaluated expression @c((1+ x)). As you can see it takes a value of type
+   @c(REAL) and returns a @c(REAL). Here is another example:
+
+   @begin[lang=lisp](code)
+CL-USER> (tie-example:infer-types '(1+ (floor x)))
+#(#((X . #<TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}>)
+    (#:VAR564 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10377E3313}>)
+    (#:VAR563 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10377E3313}>))
+  #((X . #<TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}>)
+    (#:VAR564 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE T {1036B20BD3}>)
+    (#:VAR563 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE T {1036B20BD3}>))
+  #((X . #<TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}>)
+    (#:VAR564 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE T {1036B20BD3}>)
+    (#:VAR563 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10377E3313}>)))
+((TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (2) (1) (#<TYPE-INFERENCE-ENGINE:STATEMENT X ← (INITIALIZE ) {1007DF4543}>
+                                                    #<TYPE-INFERENCE-ENGINE:STATEMENT VAR564 ← (INITIALIZE ) {1007DF4563}>
+                                                    #<TYPE-INFERENCE-ENGINE:STATEMENT VAR563 ← (INITIALIZE ) {1007DF4583}>))
+ (TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (0) (2) (#<TYPE-INFERENCE-ENGINE:STATEMENT VAR563 ← (FLOOR X) {1007DF4393}>))
+ (TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (1) (0) (#<TYPE-INFERENCE-ENGINE:STATEMENT VAR564 ← (1+ #:VAR563) {1007DF43F3}>)))
+#:VAR564
+   @end(code)
+   The first element of the first returned value says that an expression @c((1+
+   (floor x))) takes a @c(REAL) argument @c(x) and returns an @c(INTEGER).
+@end(section)
+
+@begin(section)
+   @title(Literals)
+   If you want to use some literals of type \(t\) in your code you must do two
+   things. Firstly add an initializer function which takes no arguments and
+   returns a value of type \(t\) to the database of known functions. Then create
+   an associative list with a predicate which tests a term of an expression to
+   determine if it is a literal or not as a key and the initializer functions as
+   a value. For example, you want to use integer literals in your code. You can
+   add something like this inside @c(tie-example) package:
+   @begin[lang=lisp](code)
+(tie:definitializer *fndb* *my-system* init/integer integer)
+
+(defparameter *literals*
+  (list
+   (cons #'integerp 'init/integer)))
+   @end(code)
+   Then call @c(parse-code) inside @c(infer-types) like this:
+   @begin[lang=lisp](code)
+   (tie:parse-code expression *literals*)
+   @end(code)
+
+   Now @c(type-inference-engine) understands integer literals:
+   @begin[lang=lisp](code)   
+CL-USER> (tie-example:infer-types '(1+ 2))
+#(#((#:VAR613 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10025CC543}>)
+    (#:CONST612 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10025CC543}>))
+  #((#:VAR613 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE T {10025CC563}>)
+    (#:CONST612 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE T {10025CC563}>))
+  #((#:VAR613 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE T {10025CC563}>)
+    (#:CONST612 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10025CC543}>)))
+((TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (2) (1) (#<TYPE-INFERENCE-ENGINE:STATEMENT VAR613 ← (INITIALIZE ) {1016F6DBE3}>
+                                                    #<TYPE-INFERENCE-ENGINE:STATEMENT CONST612 ← (INITIALIZE ) {1016F6DC03}>))
+ (TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (0) (2) (#<TYPE-INFERENCE-ENGINE:STATEMENT CONST612 ← (INIT/INTEGER ) {1016F6DA33}>))
+ (TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (1) (0) (#<TYPE-INFERENCE-ENGINE:STATEMENT VAR613 ← (1+ #:CONST612) {1016F6DA93}>)))
+#:VAR613
+   @end(code)
+@end(section)
+
+@begin[ref=api](section)
+   @title(API)
+   @begin(section)
+      @title(Conditions)
+      @cl:with-package[name="type-inference-engine"](
+         @cl:doc(condition inference-error)
+         @cl:doc(condition cycle-detected)
+         @cl:doc(condition typesystem-error)
+         @cl:doc(condition incorrect-definition)
+         @cl:doc(condition arity-error)
+         @cl:doc(condition unknown-function)
+         @cl:doc(condition unknown-literal)
+         @cl:doc(condition fndb-entry-exists)
+      )
+   @end(section)
+   @begin(section)
+      @title(Type system)
+      During to serapeum limitations, the type @c(type-node) and the
+      corresponding constructor cannot be documented. Look at examples in
+      @ref[id=type-system](this) section.
+      @cl:with-package[name="type-inference-engine"](
+         @cl:doc(type type-node-order)
+         @cl:doc(function le)
+         @cl:doc(function ge)
+         @cl:doc(function type-node-order)
+         @cl:doc(function find-type-node)
+         @cl:doc(function flatten-type-graph)
+         @cl:doc(function check-type-system)
+         @cl:doc(function join)
+         @cl:doc(function meet)
+         @cl:doc(function types-intersect-p)
+         @cl:doc(function print-graphviz-representation)
+      )
+   @end(section)
+   @begin(section)
+      @title(Known functions)
+      @cl:with-package[name="type-inference-engine"](
+         @cl:doc(macro defknown)
+         @cl:doc(macro definitializer)
+         @cl:doc(function make-fndb)
+      )
+   @end(section)
+   @begin(section)
+      @title(Code parsing)
+      @b(NB): This API is subject to change.
+      @cl:with-package[name="type-inference-engine"](
+         @cl:doc(function parse-code)
+         @cl:doc(function flat-control-flow-graph)
+      )
+   @end(section)
+   @begin(section)
+      @title(Type inference)
+      @cl:with-package[name="type-inference-engine"](
+         @cl:doc(function infer-types)
+      )
+   @end(section)
+@end(section)

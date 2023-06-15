@@ -239,6 +239,89 @@ type of used type system."
                     arguments-clause type-bindings-clause
                     (&key (bottom-guard nil bottom-guard-p))
                     t0-cond-clauses &optional t1+-cond-clauses)
+  "Add new known functions to the database @c(db). @c(Top) is the top
+type of a type system. @c(Names) is a list of function names to be
+added. The new functions all have the same arity and the same
+functions T₀, T₁, etc.
+
+@c(Type-bindings-clause) is a form @c((arglist (result-variable
+top-variable narg-variable))) and contains some important variables
+which can be used in the body of functions T_i. @c(Arglist) is a list
+of variables which are bound to types of arguments of the defined
+functions. @c(Top-variable) is bound to the top type of a type-system,
+@c(res-variable) is bound to type of the result of the defined
+function and @c(narg-variable) is bound to i-1 in the body of T_i when
+i > 0.
+
+@c(Type-bindings-clause) is an associative list with entries in the
+form @c((variable-name . type-name)) which contains additional
+bindings of variables to types inside T_i functions.
+
+@c(Bottom-guard) argument must always be present and be either @c(nil)
+or name of a variable bound to the bottom type. If @c(bottom-guard) is
+not null then bottom guards will be present in T_i functions.
+
+@c(T0-cond-clauses) define a body of function T₀ in which bindings to
+@c(top-variable) and variables in @c(arglist) are in effect. This body
+is an explicit cond, so @c(t0-cond-clauses) may be like this
+@begin[lang=lisp](code)
+((condition-1 form-1)
+ (condition-2 form-2)
+ etc)
+@end(code)
+@c(T0-cond-clauses) must evaluate to a type. If @c(bottom-guard) is
+not @c(nil) an implicit conditional is inserted @i(before) all other
+conditionals in cond. This conditional checks if any of variables in
+@c(arglist) are bound to the bottom type, and if so the bottom type is
+returned. Also another conditional is inserted @i(after) all other
+conditionals which just returns the bottom type in any case.
+
+@c(T1+-cond-clauses) define a body of functions T₁, T₂, etc in which
+bindings to @c(top-variable), @c(res-variable), @c(narg-variable) and
+variables in @c(arglist) are in effect. This body is an explicit cond
+and must evaluate to a type, just like @c(T0-cond-clauses).
+
+For example the following code
+@begin[lang=lisp](code)
+(defknown *fndb* *type-system* (length) ((x) (res top n))
+  ((integer  . integer)
+   (sequence . sequence)
+   (bottom   . nil))
+  (:bottom-guard bottom)
+  ;; T₀
+  (((types-intersect-p top x sequence) integer))
+  ;; T₁
+  (((ge (type-node-order top res integer))
+    (meet top x sequence))))
+@end(code)
+creates a function T₀
+@begin[lang=lisp](code)
+(lambda (top x)
+  (let ((integer  (find-type-node 'integer  top))
+        (sequence (find-type-node 'sequence top))
+        (bottom   (find-type-node nil       top)))
+    (cond
+      ((eq x bottom) bottom)
+      ((types-intersect-p top x sequence) integer)
+      (t bottom))))
+@end(code)
+and T₁
+@begin[lang=lisp](code)
+(lambda (top n res x)
+  (assert (< n 1))
+  (let ((integer  (find-type-node 'integer  top))
+        (sequence (find-type-node 'sequence top))
+        (bottom   (find-type-node nil       top)))
+    (cond
+      ((or (eq x   bottom)
+           (eq res bottom))
+       bottom)
+      ((ge (type-node-order top res integer))
+       (meet top x sequence))
+      (t bottom))))
+@end(code)
+and adds a corresponding entry about the function @c(length) in
+@c(*fndb*)."
   (unless bottom-guard-p
     (error "Specify :bottom-guard"))
   (let ((db-var  (gensym))
@@ -251,6 +334,19 @@ type of used type system."
                            ,t0-cond-clauses ,t1+-cond-clauses)))))
 
 (defmacro definitializer (db top name type)
+  "Add a function with the name @c(name) which takes zero arguments
+and returns a value of type @c(type) to FNDB @c(db)
+@begin[lang=lisp](code)
+(definitializer db top name type)
+@end(code)
+is equivalent to
+@begin[lang=lisp](code)
+(defknown db top (name) (() res top n)
+  ((type-var . type))
+  (:bottom-guard nil)
+  ((t type-var))
+  ())
+@end(code)"
   (alex:with-gensyms (res-var top-var n-var type-var)
     `(defknown ,db ,top (,name) (() (,res-var ,top-var ,n-var))
        ((,type-var . ,type))
@@ -262,7 +358,7 @@ type of used type system."
          (values hash-table &optional))
 (defun make-fndb (top-node)
   "Make a functions database for a type system with the top node
-TOP-NODE."
+@c(top-node)."
   (let ((fndb (make-hash-table)))
     ;; Add mandatory functions
 

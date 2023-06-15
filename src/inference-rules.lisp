@@ -288,9 +288,18 @@ of the type system."
 (sera:-> infer-types (hash-table type-node list)
          (values wide-vars->types &optional))
 (defun infer-types (db top graph)
-  "Get safe program-wide varible->type mappings for a control flow
-graph in flat format. GRAPH is a list of FLAT-CONTROL-NODEs. DB is a
-database of known functions, TOP is the top type of the type system."
+  "Get the best safe program-wide varible->type mappings for a control
+flow graph in flat format returned by
+@c(flat-control-flow-graph). @c(Graph) is an internal representation
+of an expression in the form of parallel assignment statements.
+@c(Graph) can be obtained by firstly creating a control flow graph
+from an expression by calling @c(parse-code) and secondly converting
+it to flat format with @c(flat-control-flow-graph). @c(Db) is a
+database of known functions and @c(top) is the top type of your type
+system. This function returns an array of variable->type mappings for
+each parallel assignment statement in the flattened control flow
+graph. The first element in that array is the most important as it
+corresponds to a fully evaluated expression."
   (labels ((%fix (mappings)
              (let ((new-mappings (inference-pass db top graph mappings)))
                (if (equalp new-mappings mappings) mappings
