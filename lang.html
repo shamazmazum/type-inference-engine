@@ -1,0 +1,121 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>
+  Language of expressions &ndash; type-inference-engine
+</title>
+    <link rel="stylesheet" href="static/style.css"/>
+    
+  <link rel="stylesheet" href="static/highlight.css"/>
+  <script src="static/highlight.js"></script>
+  <script src="static/load-mathjax.js" async></script>
+  <style>
+   /* Highlight the current top-level TOC item, and hide the TOC of all other items */
+
+   .toc a[data-node="lang"] {
+       /*color: #AD3108;*/
+   }
+
+   .toc ol {
+       display: none;
+   }
+
+   .toc li a[data-node="lang"] {
+       font-weight: bold;
+   }
+
+   .toc li a[data-node="lang"] + ol {
+       display: block;
+   }
+
+   .toc li a[data-node="lang"] + ol li {
+       margin-left: 10px;
+   }
+  </style>
+
+  </head>
+  <body>
+    
+  <h1 class="doc-title">type-inference-engine</h1>
+  <article id="article" data-section="lang">
+    <aside>
+      <ol class="toc"><li><a href="index.html" data-node="index">Overview</a></li><li><a href="lang.html" data-node="lang">Language of expressions</a></li><li><a href="type-system.html" data-node="type-system">Type systems</a></li><li><a href="known-functions.html" data-node="known-functions">Known functions</a></li><li><a href="inference.html" data-node="inference">Type inference problem</a></li><li><a href="literals.html" data-node="literals">Literals</a></li><li><a href="api.html" data-node="api">API</a><ol><li><a href="conditions.html" data-node="conditions">Conditions</a></li><li><a href="0-type-system.html" data-node="0-type-system">Type system</a></li><li><a href="1-known-functions.html" data-node="1-known-functions">Known functions</a></li><li><a href="code-parsing.html" data-node="code-parsing">Code parsing</a></li><li><a href="type-inference.html" data-node="type-inference">Type inference</a></li></ol></li></ol>
+    </aside>
+    <main class="codex-section">
+      <header>
+        <h2 class="section-title">Language of expressions</h2>
+      </header>
+      <div class="content">
+        <p>
+   The inference engine infers types for expressions in the following language:
+   </p><pre><code class=NIL>   expression = literal | variable | funcall
+   funcall    = &quot;(&quot; + function + expression* + &quot;)&quot;
+   variable   = symbol
+   function   = symbol
+   </code></pre><p>
+   Here <code>|</code> means non-ambiguous choice operator, i.e. if an expression is a
+   literal, it cannot be a variable of a function call. To determine what is a
+   literal and what is not, a sequence of tests is performed on each term before
+   it is classified as either a variable or a function call. For more
+   information look at <code>parse-code</code> function in the <a id="api" href="api.html" data-node="api">API</a>
+   section. For example, both <code>(+ (sin x)(- y z))</code> and <code>(foo x y (- x y))</code>
+   are expressions, but <code>((x y)(y x))</code>, <code>((foo x))</code> and <code>(foo x) y</code> are
+   not (the latter is actualy two correct expressions). <b>NB</b>: There are no
+   special forms as <code>let</code> or <code>if</code> in the language yet.</p><p>   An example provided with this engine in the system
+   <code>type-inference-engine/example</code> has the following defined literals:
+   </p><ul><li>Integers are all literals recognized by Common Lisp as such
+   e.g. <code>1</code>, <code>2</code>, <code>3</code> etc.</li><li>Floats are all literals recognized by Common Lisp as such
+   e.g. <code>1.0</code>, <code>2.32</code>, <code>3.2f5</code>, <code>3.43d0</code> etc.</li><li><code>T</code>(as a boolean) and <code>NIL</code>(as a boolean, a list or <code>NULL</code>).</li><li>Cons cells, e.g. <code>(3 . 5)</code>, <code>(nil . t)</code>. Lists are also recognized
+   as conses.</li><li>Vectors, e.g. <code>#(1 2 3)</code>.</li><li>Multidimensional arrays, e.g. <code>#2a((1)(2)(3))</code>.</li></ul><p>   It also contains the following known functions:
+   </p><ul><li><code>1+</code>, <code>1-</code>: Take a numeric argument and return it incremented or
+   decremented by 1 (as in Common Lisp).</li><li><code>sin</code>, <code>cos</code>: Take a numeric argument and return its sine or cosine
+   (as in Common Lisp).</li><li><code>length</code>: Take a sequence (read the next section if you do not know
+   what it is) and return its length as an integer (as in Common Lisp).</li><li><code>+</code>, <code>-</code>: Add or subtract two numeric arguments and return a
+   number (as in Common Lisp, but these functions are two-args).</li><li><code>floor</code>, <code>ceiling</code>: Take a numeric argument and round it (return an
+   integer).</li><li><code>elt</code>: Take a sequence and an index (integer) and return an element
+   from that sequence.</li><li><code>cons</code>: Constructor for cons cells.</li><li><code>numberp</code>: Take a value and return either <code>T</code>(if the value is a
+   number) or <code>NIL</code>(otherwise).</li><li><code>bool</code>: Take a boolean and any two values <code>x</code> and <code>y</code>. Return the
+   <code>x</code> if the boolean is <code>T</code> and <code>y</code> otherwise. Note, that this is an
+   ordinary function, so it evaluates both <code>x</code> and <code>y</code> before giving a
+   result.</li></ul><p>   Unlike Common Lisp, all functions in this language return exactly one
+   value. Note that these functions are not mandatory for the engine and can be
+   replaced with your own set. Also note that these functions are not
+   evaluated. E.g. inferring types for an expression <code>(sin x)</code> does not
+   actually evaluate <code>x</code> or <code>(sin x)</code>. You do not have to bind <code>x</code> with
+   anything. As the last important notice: there is no generalized booleans in
+   the example language (but you can redefine this behaviour): the first
+   argument of <code>bool</code><b>must</b> be either <code>T</code> or <code>NIL</code>.</p><p>   An expression is internally represented as a directed graph of parallel
+   assignment statements in the following form:
+   \((x_1, x_2, \dots, x_m) \leftarrow (f_1 (y_{1_1}, y_{1_2}, \dots,
+   y_{1_{n_1}}), \dots, f_m (y_{m_1}, y_{m_2}, \dots, y_{m_{n_m}})) \)
+   That means that a statement contains \(m\) assignments. When a statement is
+   executed \(m\) functions from \(f_1\) to \(f_m\) are evaluated with values in
+   corresponding variables \(y_i\) as arguments and their results are assigned to
+   (all distinct) variables \(x_i\). For example an expression <code>(sin (1+ y))</code>
+   is transformed in something like following:
+   </p><pre><code class=NIL>   1: (y, v1, v2) ← initialize variables with some safe values
+   2: v1 ← y + 1
+   3: v2 ← sin v1
+   </code></pre><p>
+   with edges \(1 \rightarrow 2\), \(2 \rightarrow 3\),
+   \(3 \rightarrow 1\). Note, that the last statement is always connected to the
+   first. This knowleadge about internal representation will be useful later
+   when we will read a <a id="inference" href="inference.html" data-node="inference">section</a> about type inference.
+</p>
+      </div>
+    </main>
+  </article>
+  <footer>
+    <div class="info">
+      Created with <a href="https://github.com/CommonDoc/codex">Codex</a>.
+    </div>
+  </footer>
+  <script>
+   HighlightLisp.highlight_auto();
+  </script>
+
+  </body>
+</html>

@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>
+  Type inference problem &ndash; type-inference-engine
+</title>
+    <link rel="stylesheet" href="static/style.css"/>
+    
+  <link rel="stylesheet" href="static/highlight.css"/>
+  <script src="static/highlight.js"></script>
+  <script src="static/load-mathjax.js" async></script>
+  <style>
+   /* Highlight the current top-level TOC item, and hide the TOC of all other items */
+
+   .toc a[data-node="inference"] {
+       /*color: #AD3108;*/
+   }
+
+   .toc ol {
+       display: none;
+   }
+
+   .toc li a[data-node="inference"] {
+       font-weight: bold;
+   }
+
+   .toc li a[data-node="inference"] + ol {
+       display: block;
+   }
+
+   .toc li a[data-node="inference"] + ol li {
+       margin-left: 10px;
+   }
+  </style>
+
+  </head>
+  <body>
+    
+  <h1 class="doc-title">type-inference-engine</h1>
+  <article id="article" data-section="inference">
+    <aside>
+      <ol class="toc"><li><a href="index.html" data-node="index">Overview</a></li><li><a href="lang.html" data-node="lang">Language of expressions</a></li><li><a href="type-system.html" data-node="type-system">Type systems</a></li><li><a href="known-functions.html" data-node="known-functions">Known functions</a></li><li><a href="inference.html" data-node="inference">Type inference problem</a></li><li><a href="literals.html" data-node="literals">Literals</a></li><li><a href="api.html" data-node="api">API</a><ol><li><a href="conditions.html" data-node="conditions">Conditions</a></li><li><a href="0-type-system.html" data-node="0-type-system">Type system</a></li><li><a href="1-known-functions.html" data-node="1-known-functions">Known functions</a></li><li><a href="code-parsing.html" data-node="code-parsing">Code parsing</a></li><li><a href="type-inference.html" data-node="type-inference">Type inference</a></li></ol></li></ol>
+    </aside>
+    <main class="codex-section">
+      <header>
+        <h2 class="section-title">Type inference problem</h2>
+      </header>
+      <div class="content">
+        <p>
+   Suppose you have an expression in our <a id="lang" href="lang.html" data-node="lang">Language of expressions</a>
+   which is internally translated to a graph of parallel assignment
+   statements. Let \(V\) be a set of variables which appear in all those
+   statements. A mapping \(V \rightarrow I \) maps variables \((v_1 \in V, v_2
+   \in V,\dots) \) to types of values bound to those variables \((t_1 \in I,
+   t_2 \in I,\dots) \) in some point of time during evaluation of our
+   expression. Suppose our execution graph has \(n\) vertices (statements), then
+   let \([V \rightarrow I]^n\) be a mapping from variables to types before
+   execution of all \(n\) statements in the graph. A mapping \([V \rightarrow
+   I]^n\) is called safe if for types \((t'_{1_m}, t'_{2_m}, \dots)\) of values
+   bound to variables \((v_1, v_2, \dots)\) during any possible control flow graph
+   execution before execution of any statement \(m\) holds the following:
+   \(t'_{1_m} \le t_{1_m}\), \(t'_{2_m} \le t_{2_m}\) etc. For example a mapping
+   \([v_1 \rightarrow T, v_2 \rightarrow T, \dots]^n\) is always safe. The
+   problem of type inference is to find a mapping \([V \rightarrow I]^n\) which
+   is safe and as narrow as possible.</p><p>   When your type system and database of known functions are created, you can
+   start to infer types of expressions. Let's add a function <code>infer-types</code> to
+   our <code>tie-example</code> package:
+   </p><pre><code class="lisp">(defun infer-types (expression)
+  &quot;Infer types in the expression using our type system and function
+database.&quot;
+  (multiple-value-bind (graph result-variable)
+      (tie:parse-code expression nil)
+    (let ((flat-graph (tie:flat-control-flow-graph graph)))
+      (values
+       (tie:infer-types *fndb* *my-system* flat-graph)
+       flat-graph
+       result-variable))))
+(export 'infer-types)
+   </code></pre><p>   Here we give it a try:
+   </p><pre><code class="lisp">CL-USER&gt; (tie-example:infer-types '(1+ x))
+#(#((#:VAR554 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}&gt;)
+    (X . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}&gt;))
+  #((#:VAR554 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {1036B20BD3}&gt;)
+    (X . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}&gt;)))
+((TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (1)(1)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR554 ← (INITIALIZE ) {102D5DCFC3}&gt;
+                                                    #&lt;TYPE-INFERENCE-ENGINE:STATEMENT X ← (INITIALIZE ) {102D5DCFE3}&gt;))
+ (TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (0)(0)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR554 ← (1+ X) {102D5DCE93}&gt;)))
+#:VAR554
+   </code></pre><p>   Here the first returned value is our \([V \rightarrow I]^2\) mapping which
+   corresponds to two parallel assignment statements which are returned as the
+   second value. The third value is a variable which will hold the result of
+   <code>(1+ x)</code>. The first element of the first returned array is of interest
+   here. It is a mapping \(V \rightarrow I\) which corresponds to the fully
+   evaluated expression <code>(1+ x)</code>. As you can see it takes a value of type
+   <code>REAL</code> and returns a <code>REAL</code>. Here is another example:</p><p>   </p><pre><code class="lisp">CL-USER&gt; (tie-example:infer-types '(1+ (floor x)))
+#(#((X . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}&gt;)
+    (#:VAR564 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10377E3313}&gt;)
+    (#:VAR563 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10377E3313}&gt;))
+  #((X . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}&gt;)
+    (#:VAR564 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {1036B20BD3}&gt;)
+    (#:VAR563 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {1036B20BD3}&gt;))
+  #((X . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}&gt;)
+    (#:VAR564 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {1036B20BD3}&gt;)
+    (#:VAR563 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10377E3313}&gt;)))
+((TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (2)(1)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT X ← (INITIALIZE ) {1007DF4543}&gt;
+                                                    #&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR564 ← (INITIALIZE ) {1007DF4563}&gt;
+                                                    #&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR563 ← (INITIALIZE ) {1007DF4583}&gt;))
+ (TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (0)(2)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR563 ← (FLOOR X) {1007DF4393}&gt;))
+ (TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (1)(0)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR564 ← (1+ #:VAR563) {1007DF43F3}&gt;)))
+#:VAR564
+   </code></pre><p>
+   The first element of the first returned value says that an expression <code>(1+
+   (floor x))</code> takes a <code>REAL</code> argument <code>x</code> and returns an <code>INTEGER</code>.
+</p>
+      </div>
+    </main>
+  </article>
+  <footer>
+    <div class="info">
+      Created with <a href="https://github.com/CommonDoc/codex">Codex</a>.
+    </div>
+  </footer>
+  <script>
+   HighlightLisp.highlight_auto();
+  </script>
+
+  </body>
+</html>

@@ -1,0 +1,171 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>
+  Overview &ndash; type-inference-engine
+</title>
+    <link rel="stylesheet" href="static/style.css"/>
+    
+  <link rel="stylesheet" href="static/highlight.css"/>
+  <script src="static/highlight.js"></script>
+  <script src="static/load-mathjax.js" async></script>
+  <style>
+   /* Highlight the current top-level TOC item, and hide the TOC of all other items */
+
+   .toc a[data-node="index"] {
+       /*color: #AD3108;*/
+   }
+
+   .toc ol {
+       display: none;
+   }
+
+   .toc li a[data-node="index"] {
+       font-weight: bold;
+   }
+
+   .toc li a[data-node="index"] + ol {
+       display: block;
+   }
+
+   .toc li a[data-node="index"] + ol li {
+       margin-left: 10px;
+   }
+  </style>
+
+  </head>
+  <body>
+    
+  <h1 class="doc-title">type-inference-engine</h1>
+  <article id="article" data-section="index">
+    <aside>
+      <ol class="toc"><li><a href="index.html" data-node="index">Overview</a></li><li><a href="lang.html" data-node="lang">Language of expressions</a></li><li><a href="type-system.html" data-node="type-system">Type systems</a></li><li><a href="known-functions.html" data-node="known-functions">Known functions</a></li><li><a href="inference.html" data-node="inference">Type inference problem</a></li><li><a href="literals.html" data-node="literals">Literals</a></li><li><a href="api.html" data-node="api">API</a><ol><li><a href="conditions.html" data-node="conditions">Conditions</a></li><li><a href="0-type-system.html" data-node="0-type-system">Type system</a></li><li><a href="1-known-functions.html" data-node="1-known-functions">Known functions</a></li><li><a href="code-parsing.html" data-node="code-parsing">Code parsing</a></li><li><a href="type-inference.html" data-node="type-inference">Type inference</a></li></ol></li></ol>
+    </aside>
+    <main class="codex-section">
+      <header>
+        <h2 class="section-title">Overview</h2>
+      </header>
+      <div class="content">
+        <p>
+   This is a simple type inference engine based on the paper by Marc Kaplan and
+   Jeffrey Ullman (see below). This engine features custom type systems based on
+   subtyping, a simple language based on S-expressions and allows you to create
+   basic functions to start type inferece with. There are some examples
+   below. These examples use a toy type system and a set of known functions from
+   <code>type-inference-engine/example</code> package. Do not be afraid if you do not
+   understand them, they will be explained in futher sections.</p><p>   </p><pre><code class="lisp">(defpackage examples
+  (:use #:cl)
+  (:local-nicknames (#:tie    #:type-inference-engine)
+                    (#:tie/ex #:type-inference-engine/example)))
+(in-package :examples)
+
+(tie/ex:infer-types '(+ x (sin y)))
+;; =&gt;
+;; #((Y . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;)
+;;   (#:VAR4955 . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;)
+;;   (X . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;)
+;;   (#:VAR4954 . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;))
+;; #:VAR4955
+;;
+;; The first value is a mapping from variables used in an expression
+;; '(+ x (sin y))(later: the expression) to their corresponding
+;; types. Variables which begin with #:VAR are intermediate variables
+;; which do not appear in the expression explicitly. The second value
+;; is a name of variable which contains the result of evaluation of
+;; the expression. All in all, the output of TIE/EX:INFER-TYPES can be
+;; read as: the expression takes two arguments of type NUMBER and
+;; returns a result of type NUMBER.
+
+(tie/ex:infer-types '(1+ (sin (floor y))))
+;; =&gt;
+;; #((Y . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;)
+;;   (#:VAR4956 . #&lt;TIE:TYPE-NODE INTEGER {10286E6413}&gt;)
+;;   (#:VAR4958 . #&lt;TIE:TYPE-NODE FLOAT {10286E6433}&gt;)
+;;   (#:VAR4957 . #&lt;TIE:TYPE-NODE FLOAT {10286E6433}&gt;))
+;; #:VAR4958
+;;
+;; Here Y becomes rounded with FLOOR before SIN is calculated. As a
+;; result the most narrow type of (SIN (FLOOR Y)) is FLOAT (which is a
+;; type for real numbers in floating point representation), not NUMBER
+;; (which is a type for numbers in general). Hence the whole
+;; expression takes an argument of type NUMBER and returns a FLOAT.
+
+(tie/ex:infer-types '(+ (length y)(- x (floor (elt y x)))))
+;; =&gt;
+;; #((#:VAR4963 . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;)
+;;   (X . #&lt;TIE:TYPE-NODE INTEGER {10286E6413}&gt;)
+;;   (#:VAR4964 . #&lt;TIE:TYPE-NODE INTEGER {10286E6413}&gt;)
+;;   (Y . #&lt;TIE:TYPE-NODE SEQUENCE {1037ADC713}&gt;)
+;;   (#:VAR4966 . #&lt;TIE:TYPE-NODE INTEGER {10286E6413}&gt;)
+;;   (#:VAR4962 . #&lt;TIE:TYPE-NODE INTEGER {10286E6413}&gt;)
+;;   (#:VAR4965 . #&lt;TIE:TYPE-NODE INTEGER {10286E6413}&gt;))
+;; #:VAR4966
+;;
+;; Here the most narrow type for Y is a SEQUENCE (one dimensional array-like
+;; collection). X can only be an INTEGER as it serves a role of an index into
+;; Y in (ELT Y X). The result has a type INTEGER, because both LENGTH and FLOOR
+;; return an INTEGER.
+
+(tie/ex:infer-types '(+ x (length x)))
+;; =&gt;
+;; #((#:VAR4968 . #&lt;TIE:TYPE-NODE NIL {10286E6313}&gt;)
+;;   (X . #&lt;TIE:TYPE-NODE NIL {10286E6313}&gt;)
+;;   (#:VAR4967 . #&lt;TIE:TYPE-NODE NIL {10286E6313}&gt;))
+;; #:VAR4968
+;;
+;; The expression (+ x (length x)) maps values of type NIL to NIL,
+;; i.e. there are no such values for which the expression can be
+;; evaluated. NIL is a special type so that ∄x: x ∈ NIL. This is
+;; because X cannot be a number and a sequence at the same time.
+
+(tie/ex:infer-types '(tie/ex:bool x (1+ (floor y))(sin z)))
+;; =&gt;
+;; #((Z . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;)
+;;   (Y . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;)
+;;   (#:VAR4969 . #&lt;TIE:TYPE-NODE INTEGER {10286E6413}&gt;)
+;;   (#:VAR4972 . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;)
+;;   (X . #&lt;TIE:TYPE-NODE BOOLEAN {1037EFF223}&gt;)
+;;   (#:VAR4970 . #&lt;TIE:TYPE-NODE INTEGER {10286E6413}&gt;)
+;;   (#:VAR4971 . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;))
+;; #:VAR4972
+;;
+;; This expression take a BOOLEAN x and returns a value of type
+;; NUMBER. BOOL function is like IF in Common Lisp with exception that
+;; BOOL evaluates all its arguments.
+
+(tie/ex:infer-types '(tie/ex:bool (numberp (1+ x)) 3.2 4))
+;; =&gt;
+;; #((X . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;)
+;;   (#:VAR4973 . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;)
+;;   (#:VAR4977 . #&lt;TIE:TYPE-NODE FLOAT {10286E6433}&gt;)
+;;   (#:VAR4974 . #&lt;TIE:TYPE-NODE TRUE {1037F5D7B3}&gt;)
+;;   (#:CONST4975 . #&lt;TIE:TYPE-NODE FLOAT {10286E6433}&gt;)
+;;   (#:CONST4976 . #&lt;TIE:TYPE-NODE INTEGER {10286E6413}&gt;))
+;; #:VAR4977
+;;
+;; (1+ X) have to be a number, so the result is of type FLOAT.
+   </code></pre><p>
+   For more understanding what is going on here, visit <a id="lang" href="lang.html" data-node="lang">language of
+   expressions</a> and <a id="type-system" href="type-system.html" data-node="type-system">type system</a> sections.</p><p>   Reference to the paper: Marc A. Kaplan and Jeffrey D. Ullman. 1978. A general
+   scheme for the automatic inference of variable types. In Proceedings of the
+   5th ACM SIGACT-SIGPLAN symposium on Principles of programming languages (POPL
+   '78). Association for Computing Machinery, New York, NY, USA,
+   60–75. https://doi.org/10.1145/512760.512768
+</p>
+      </div>
+    </main>
+  </article>
+  <footer>
+    <div class="info">
+      Created with <a href="https://github.com/CommonDoc/codex">Codex</a>.
+    </div>
+  </footer>
+  <script>
+   HighlightLisp.highlight_auto();
+  </script>
+
+  </body>
+</html>

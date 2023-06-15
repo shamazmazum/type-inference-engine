@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>
+  Literals &ndash; type-inference-engine
+</title>
+    <link rel="stylesheet" href="static/style.css"/>
+    
+  <link rel="stylesheet" href="static/highlight.css"/>
+  <script src="static/highlight.js"></script>
+  <script src="static/load-mathjax.js" async></script>
+  <style>
+   /* Highlight the current top-level TOC item, and hide the TOC of all other items */
+
+   .toc a[data-node="literals"] {
+       /*color: #AD3108;*/
+   }
+
+   .toc ol {
+       display: none;
+   }
+
+   .toc li a[data-node="literals"] {
+       font-weight: bold;
+   }
+
+   .toc li a[data-node="literals"] + ol {
+       display: block;
+   }
+
+   .toc li a[data-node="literals"] + ol li {
+       margin-left: 10px;
+   }
+  </style>
+
+  </head>
+  <body>
+    
+  <h1 class="doc-title">type-inference-engine</h1>
+  <article id="article" data-section="literals">
+    <aside>
+      <ol class="toc"><li><a href="index.html" data-node="index">Overview</a></li><li><a href="lang.html" data-node="lang">Language of expressions</a></li><li><a href="type-system.html" data-node="type-system">Type systems</a></li><li><a href="known-functions.html" data-node="known-functions">Known functions</a></li><li><a href="inference.html" data-node="inference">Type inference problem</a></li><li><a href="literals.html" data-node="literals">Literals</a></li><li><a href="api.html" data-node="api">API</a><ol><li><a href="conditions.html" data-node="conditions">Conditions</a></li><li><a href="0-type-system.html" data-node="0-type-system">Type system</a></li><li><a href="1-known-functions.html" data-node="1-known-functions">Known functions</a></li><li><a href="code-parsing.html" data-node="code-parsing">Code parsing</a></li><li><a href="type-inference.html" data-node="type-inference">Type inference</a></li></ol></li></ol>
+    </aside>
+    <main class="codex-section">
+      <header>
+        <h2 class="section-title">Literals</h2>
+      </header>
+      <div class="content">
+        <p>
+   If you want to use some literals of type \(t\) in your code you must do two
+   things. Firstly add an initializer function which takes no arguments and
+   returns a value of type \(t\) to the database of known functions. Then create
+   an associative list with a predicate which tests a term of an expression to
+   determine if it is a literal or not as a key and the initializer functions as
+   a value. For example, you want to use integer literals in your code. You can
+   add something like this inside <code>tie-example</code> package:
+   </p><pre><code class="lisp">(tie:definitializer *fndb* *my-system* init/integer integer)
+
+(defparameter *literals*
+  (list
+   (cons #'integerp 'init/integer)))
+   </code></pre><p>
+   Then call <code>parse-code</code> inside <code>infer-types</code> like this:
+   </p><pre><code class="lisp">(tie:parse-code expression *literals*)
+   </code></pre><p>   Now <code>type-inference-engine</code> understands integer literals:
+   </p><pre><code class="lisp">   
+CL-USER&gt; (tie-example:infer-types '(1+ 2))
+#(#((#:VAR613 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10025CC543}&gt;)
+    (#:CONST612 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10025CC543}&gt;))
+  #((#:VAR613 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {10025CC563}&gt;)
+    (#:CONST612 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {10025CC563}&gt;))
+  #((#:VAR613 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {10025CC563}&gt;)
+    (#:CONST612 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10025CC543}&gt;)))
+((TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (2)(1)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR613 ← (INITIALIZE ) {1016F6DBE3}&gt;
+                                                    #&lt;TYPE-INFERENCE-ENGINE:STATEMENT CONST612 ← (INITIALIZE ) {1016F6DC03}&gt;))
+ (TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (0)(2)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT CONST612 ← (INIT/INTEGER ) {1016F6DA33}&gt;))
+ (TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (1)(0)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR613 ← (1+ #:CONST612) {1016F6DA93}&gt;)))
+#:VAR613
+   </code></pre><p>
+</p>
+      </div>
+    </main>
+  </article>
+  <footer>
+    <div class="info">
+      Created with <a href="https://github.com/CommonDoc/codex">Codex</a>.
+    </div>
+  </footer>
+  <script>
+   HighlightLisp.highlight_auto();
+  </script>
+
+  </body>
+</html>

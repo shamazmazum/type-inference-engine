@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>
+  Known functions &ndash; type-inference-engine
+</title>
+    <link rel="stylesheet" href="static/style.css"/>
+    
+  <link rel="stylesheet" href="static/highlight.css"/>
+  <script src="static/highlight.js"></script>
+  <script src="static/load-mathjax.js" async></script>
+  <style>
+   /* Highlight the current top-level TOC item, and hide the TOC of all other items */
+
+   .toc a[data-node="known-functions"] {
+       /*color: #AD3108;*/
+   }
+
+   .toc ol {
+       display: none;
+   }
+
+   .toc li a[data-node="known-functions"] {
+       font-weight: bold;
+   }
+
+   .toc li a[data-node="known-functions"] + ol {
+       display: block;
+   }
+
+   .toc li a[data-node="known-functions"] + ol li {
+       margin-left: 10px;
+   }
+  </style>
+
+  </head>
+  <body>
+    
+  <h1 class="doc-title">type-inference-engine</h1>
+  <article id="article" data-section="known-functions">
+    <aside>
+      <ol class="toc"><li><a href="index.html" data-node="index">Overview</a></li><li><a href="lang.html" data-node="lang">Language of expressions</a></li><li><a href="type-system.html" data-node="type-system">Type systems</a></li><li><a href="known-functions.html" data-node="known-functions">Known functions</a></li><li><a href="inference.html" data-node="inference">Type inference problem</a></li><li><a href="literals.html" data-node="literals">Literals</a></li><li><a href="api.html" data-node="api">API</a><ol><li><a href="conditions.html" data-node="conditions">Conditions</a></li><li><a href="0-type-system.html" data-node="0-type-system">Type system</a></li><li><a href="1-known-functions.html" data-node="1-known-functions">Known functions</a></li><li><a href="code-parsing.html" data-node="code-parsing">Code parsing</a></li><li><a href="type-inference.html" data-node="type-inference">Type inference</a></li></ol></li></ol>
+    </aside>
+    <main class="codex-section">
+      <header>
+        <h2 class="section-title">Known functions</h2>
+      </header>
+      <div class="content">
+        <p>
+   Now, suppose you have defined your type system \( I \) with properties
+   described in the previous section. Now, you want to define some basic
+   primitives to work with. Remember, the part of <a id="lang" href="lang.html" data-node="lang">this section</a>
+   which describes known functions and literals is relevant for an example in
+   the <code>type-inference-engine/example</code> package/system and you may wish to
+   define your own set of functions.</p><p>   Suppose you have a function \( f \) which takes \( n \) arguments. To add
+   this function to your language as a known primitive you must define \( n + 1
+   \) supplementary functions \(T^f_0, T^f_1, \dots, T^f_n \). Here is their
+   meaning:
+   </p><ul><li>\( T^f_0 \) takes \( n \) arguments \( t_1, t_2, \dots, t_n \) and
+   returns the least type of a result of application of \(f\) to values of types
+   \( t_1, t_2, \dots, t_n \). For example, \( T^{1+}_0\)(<code>INTEGER</code>) may
+   be defined as <code>INTEGER</code> because <code>1+</code> maps integers to integers.</li><li>\( T^f_k \) takes \( n + 1 \) arguments \( t_0, t_1, \dots, t_k, \dots,
+   t_n \) and returns the least type \( t \) in a statement \( v_0 \leftarrow
+   f(v_1, \dots, v_k, \dots, v_n) \) such that \(t \le t_k\) and variables
+   \(v_i\) are bound to values of types \(t'_i\) after execution of that
+   statement, where \(t'_i = t_i\) if \(i \ne k\) and \(t'_i = t\)
+   otherwise. This can be hard to understand, but intuitively \(T^f_i, i&gt;0\) are
+   used to narrow a type of \(i\)-th argument when a type of the result is known
+   and \(T^f_0\) is used to determine a type of the result. For example \(
+   T^{1+}_1\)(<code>INTEGER</code>, <code>NUMBER</code>) may be defined as <code>INTEGER</code> and
+   \(T^{1+}_1\)(<code>SEQUENCE</code>, <code>NUMBER</code>) is <code>NIL</code></li></ul><p>   Functions \(T^f_i\) must be monotonic with respect to all arguments to
+   guarantee execution of the type inference algorithm in finite time. An unary
+   function \(f\) is monotonic if for any \(x, y: x \le y \), \(f(x) \le f(y)\)
+   follows. To learn how to define known functions in <code>type-inference-engine</code>
+   look at <code>defknown</code> macro in <a id="api" href="api.html" data-node="api">API</a> section. Note, that you need
+   to be careful when defining \(T^f_i\) functions, but not <i>very</i> careful:
+   <code>defknown</code> will signal an error if you violate monotinicity of one of the
+   functions.</p><p>   Being in our previously defined package, <code>tie-example</code>, let's create a
+   database of known functions and add a function <code>1+</code> to it, which adds <code>1</code>
+   to its only argument:
+   </p><pre><code class="lisp">(defparameter *fndb* (tie:make-fndb *my-system*))
+(tie:defknown *fndb* *my-system* (1+)
+    ;; The next form defines some important bindings inside T_i
+    ;; functions. It says that a type of the result will be available in
+    ;; the variable RES and N can take integer values from 0 to a-1,
+    ;; where a is arity of the defined function. N correspond to the
+    ;; function T_{N+1}. In the case of 1+, we just need to define T₁
+    ;; and hence N is always 0 and can be ignored. TOP is just bound to
+    ;; *MY-SYSTEM*. X is a type of an argument of 1+.
+    ((x)(res top n))
+  ;; Bind some variables (on the left side) to needed types (on the right side)
+  ((real   . real)
+   (bottom . nil))
+  ;; This will be explained later
+  (:bottom-guard nil)
+  ;; Define T₀ function. The following form is an implicit cond form
+  (;; If we pass a value of type t ≤ REAL, then 1+ returns a value of
+   ;; type t
+   ((tie:le (tie:type-node-order top x real)) x)
+   ;; Now, if t ≥ REAL (i.e. T), then 1+ returns a value of type REAL
+   ((tie:ge (tie:type-node-order top x real)) real)
+   ;; Otherwise, 1+ returns a value of type BOTTOM (i.e. it does not
+   ;; return anything at all and, for example, signals an error or
+   ;; causes your PC to explode).
+   (t bottom))
+  ;; Here we define T₁. The following form is also an implicit cond.
+  ((t
+    ;; A type of an argument always can be narrowed to X ∧ RES ∧ REAL
+    (tie:meet top (tie:meet top res x) real))))
+   </code></pre><p>   Here <code>(:bottom-guard nil)</code> does not produce any effect, but if you replace
+   <code>nil</code> with a variable which is bound to the bottom type (in our case,
+   <code>bottom</code>), two other checks will be added to \(T_i\) functions. Firstly,
+   \(T_i\) functions will always check if any of its arguments is <code>bottom</code>,
+   and if yes, they will immediately return <code>bottom</code>. Secondly, after all
+   other cond cases are checked and none of them pass, \(T_i\) functions will
+   return <code>bottom</code>. Setting <code>(:bottom-guard bottom)</code> is a good practice and
+   saves you from writing boilerplate code and making errors. Let's add another
+   function, <code>floor</code>, which takes a number and rounds it to a value of type
+   <code>INTEGER</code>:
+   </p><pre><code class="lisp">(tie:defknown *fndb* *my-system* (floor)((x)(res top n))
+  ;; Bind some variables to types which we need
+  ((real    . real)
+   (integer . integer)
+   (bottom  . nil))
+  (:bottom-guard bottom)
+  ;; Define T₀ function.
+  (;; The case x = BOTTOM is already checked by a bottom guard.
+   ;; Here if X intersects with REAL (i.e. X = INTEGER, REAL or T)
+   ;; then FLOOR returns a value of type INTEGER.
+   ((tie:types-intersect-p top x real) integer)
+   ;; All other cases (e.g. x = STRING) are covered by a bottom guard
+   )
+  ;; Define T₁.
+  (((tie:ge (tie:type-node-order top res integer))
+    ;; If a result is of type T, REAL or INTEGER, when narrow X to X ∧
+    ;; REAL
+    (tie:meet top x real))))
+   </code></pre><p>   In the next section we will learn the problem solved by
+   <code>type-inference-engine</code> and see what can be done with our toy type system
+   and these two known functions.
+</p>
+      </div>
+    </main>
+  </article>
+  <footer>
+    <div class="info">
+      Created with <a href="https://github.com/CommonDoc/codex">Codex</a>.
+    </div>
+  </footer>
+  <script>
+   HighlightLisp.highlight_auto();
+  </script>
+
+  </body>
+</html>

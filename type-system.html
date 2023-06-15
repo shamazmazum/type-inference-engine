@@ -1,0 +1,158 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>
+  Type systems &ndash; type-inference-engine
+</title>
+    <link rel="stylesheet" href="static/style.css"/>
+    
+  <link rel="stylesheet" href="static/highlight.css"/>
+  <script src="static/highlight.js"></script>
+  <script src="static/load-mathjax.js" async></script>
+  <style>
+   /* Highlight the current top-level TOC item, and hide the TOC of all other items */
+
+   .toc a[data-node="type-system"] {
+       /*color: #AD3108;*/
+   }
+
+   .toc ol {
+       display: none;
+   }
+
+   .toc li a[data-node="type-system"] {
+       font-weight: bold;
+   }
+
+   .toc li a[data-node="type-system"] + ol {
+       display: block;
+   }
+
+   .toc li a[data-node="type-system"] + ol li {
+       margin-left: 10px;
+   }
+  </style>
+
+  </head>
+  <body>
+    
+  <h1 class="doc-title">type-inference-engine</h1>
+  <article id="article" data-section="type-system">
+    <aside>
+      <ol class="toc"><li><a href="index.html" data-node="index">Overview</a></li><li><a href="lang.html" data-node="lang">Language of expressions</a></li><li><a href="type-system.html" data-node="type-system">Type systems</a></li><li><a href="known-functions.html" data-node="known-functions">Known functions</a></li><li><a href="inference.html" data-node="inference">Type inference problem</a></li><li><a href="literals.html" data-node="literals">Literals</a></li><li><a href="api.html" data-node="api">API</a><ol><li><a href="conditions.html" data-node="conditions">Conditions</a></li><li><a href="0-type-system.html" data-node="0-type-system">Type system</a></li><li><a href="1-known-functions.html" data-node="1-known-functions">Known functions</a></li><li><a href="code-parsing.html" data-node="code-parsing">Code parsing</a></li><li><a href="type-inference.html" data-node="type-inference">Type inference</a></li></ol></li></ol>
+    </aside>
+    <main class="codex-section">
+      <header>
+        <h2 class="section-title">Type systems</h2>
+      </header>
+      <div class="content">
+        <p>
+   Let \( T \) be a set of all possible values which may appear in our language
+   of expressions. For example, <code>1</code>, <code>&quot;Hello world&quot;</code>, <code>'(1 2 3)</code> all may
+   belong to \( T \). A <i>type</i> as <code>type-inference-engine</code> understands it is
+   a subset of \( T \). A <i>type system</i> \( I \) is a set of all types.
+   \( I \) is a partially ordered set: it is said that for \(t_1, t_2 \in
+   I \), \(t_1 \le t_2 \) if \( t_1 \subset t_2 \) and \( t_1 = t_2 \) if \( t_1
+   \subset t_2 \) and \( t_2 \subset t_1 \). \( I \) is also a lattice: for each
+   \( t_1, t_2 \in I \) there are unique meet \( t_1 \wedge t_2 \in I\) and join
+   \(t_1 \vee t_2 \in I \).</p><p>   Join is defined as the smallest type such as \( t_1 \subset t_1 \vee t_2 \)
+   and \( t_2 \subset t_1 \vee t_2 \) and meet is the biggest type such as \(
+   t_1 \wedge t_2 \subset t_1 \) and \( t_1 \wedge t_2 \subset t_2 \). To form a
+   lattice from a set of disjoint types, we include a type \( T \)(all possible
+   values) and a type \( \emptyset \)(no values belong to this type) in our type
+   system. So if \(t_1 \cap t_2 = \emptyset \), then \(t_1 \vee t_2 = T \) and
+   \(t_1 \wedge t_2 = \emptyset \).</p><p>   The type system \( I \) can be represented as a directed graph. For example,
+   in the example package <code>type-inference-engine/example</code> it is defined as
+   follows: <img src="types.png"/></p><p>   Here a connection from <code>ARRAY</code> to <code>VECTOR</code> means that <code>VECTOR</code> ⊂
+   <code>ARRAY</code>. A description of types follows:
+   </p><ul><li><code>T</code> is a type \(T\) which contains all possible values in the
+   program.</li><li><code>ARRAY</code> is a type for arrays of any dimensionality, e.g. <code>#(1 2
+   3)</code>, <code>#2a((1 2 3)(1 2 3))</code>.</li><li><code>SEQUENCE</code> is a type for collections which can be indexed by a
+   non-negative integer, e.g. <code>#(1 2 3)</code>, <code>'(1 2 3)</code>.</li><li><code>VECTOR</code> is a type for one-dimensional arrays, e.g. <code>#(1 2 3)</code>.</li><li><code>LIST</code> is a type for lists. List is either a cons cell or a value
+   <code>NIL</code>. Examples: <code>NIL</code>, <code>'(1 2 3)</code>, <code>'(1 2 . 3)</code>.</li><li><code>BOOLEAN</code> is a type which contains two values: <code>NIL</code> and <code>T</code>.</li><li><code>NUMBER</code> is a type for any number, possibly a complex number.</li><li><code>CONS</code> is a type for pairs of values, or cons cells, e.g. <code>'(1
+   . 4)</code>.</li><li><code>NULL</code> contains only one value: <code>NIL</code>.</li><li><code>TRUE</code> contains only one value: <code>T</code>.</li><li><code>INTEGER</code> contains integers.</li><li><code>FLOAT</code> contains floats (in any representation).</li><li><code>NIL</code> is a bottom type \( \emptyset \).</li></ul><p>   <b>NB</b>: As a limitation of the engine, the bottom type must have a name
+   <code>NIL</code>. There is no other limitations in the type naming. For example, you
+   can name \( T \) as <code>TOP</code> instead of <code>T</code>. Here I just follow a convention
+   used in Common Lisp.</p><p>   <b>NB</b>: You must keep in mind the difference between a <i>value </i><code>NIL</code> and
+   a <i>type </i><code>NIL</code>. The former is a value of types <code>NULL</code>, <code>BOOLEAN</code>,
+   <code>LIST</code>, <code>SEQUENCE</code> and <code>T</code> and the latter is a type which has no values
+   in it.</p><p>   <b>NB</b>: This kind of type systems is very close to what we have in Common
+   Lisp with exception that there is no compond types and hence no set-theoretic
+   types like <code>not</code>, <code>and</code> and <code>or</code>.</p><p>   Now let's define our own type system, which contains types <code>NIL</code>,
+   <code>INTEGER</code>, <code>REAL</code> and <code>T</code> and some wrapper functions for working with
+   that type system:
+   </p><pre><code class="lisp">(defpackage tie-example
+  (:use #:cl)
+  (:local-nicknames (#:tie  #:type-inference-engine)
+                    (#:sera #:serapeum))
+  (:export #:*my-system*
+           #:type-node-order
+           #:join
+           #:meet))
+(in-package :tie-example)
+
+(defparameter *my-system*
+  (let* ((bottom   (tie:type-node nil &quot;The bottom type. No value belongs to this type&quot;
+                                  ;; No subtypes
+                                  nil))
+         (integer  (tie:type-node 'integer &quot;A type for integer numbers&quot;
+                                  ;; NIL is the only subtype
+                                  (list bottom)))
+         (real     (tie:type-node 'real &quot;A type for real numbers&quot;
+                                  ;; INTEGERs are real numbers. INTEGER is a direct
+                                  ;; subtype of REAL
+                                  (list integer)))
+         (string   (tie:type-node 'string &quot;A type for strings&quot;
+                                  (list bottom)))
+         (top      (tie:type-node t &quot;The top type&quot;
+                                  ;; Two direct subtypes
+                                  (list real string))))
+    (tie:check-type-system top)))
+
+(defun type-op (function)
+  (lambda (type-name-1 type-name-2)
+    (funcall function *my-system*
+             (tie:find-type-node type-name-1 *my-system*)
+             (tie:find-type-node type-name-2 *my-system*))))
+             
+(sera:defalias type-node-order (type-op #'tie:type-node-order))
+(sera:defalias join (type-op #'tie:join))
+(sera:defalias meet (type-op #'tie:meet))
+   </code></pre><p>   Now, you can evaluate some relations between types:
+   </p><pre><code class="lisp">CL-USER&gt; (tie-example:type-node-order nil 'real)
+:LT
+CL-USER&gt; (tie-example:type-node-order 'integer 'real)
+:LT
+CL-USER&gt; (tie-example:type-node-order 'integer 'string)
+NIL
+CL-USER&gt; (tie-example:type-node-order 'string nil)
+:GT
+CL-USER&gt; (tie-example:type-node-order nil nil)
+:EQ
+CL-USER&gt; (tie-example:join 'integer 'real)
+#&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {100DBB6283}&gt;
+CL-USER&gt; (tie-example:meet 'integer 'real)
+#&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {100DBB6263}&gt;
+CL-USER&gt; (tie-example:join 'integer 'string)
+#&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {100DBB62C3}&gt;
+CL-USER&gt; (tie-example:meet 'integer 'string)
+#&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE NIL {100DBB6243}&gt;
+   </code></pre><p>
+</p>
+      </div>
+    </main>
+  </article>
+  <footer>
+    <div class="info">
+      Created with <a href="https://github.com/CommonDoc/codex">Codex</a>.
+    </div>
+  </footer>
+  <script>
+   HighlightLisp.highlight_auto();
+  </script>
+
+  </body>
+</html>
