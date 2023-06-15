@@ -191,7 +191,7 @@
   (multiple-value-bind (res-mappings res-var)
       (tie/ex:infer-types '(+ (sin x) (- y (length x))))
     (is (eq (var-type res-mappings res-var)
-            (find-type nil)))
+            (find-type t)))
     (is (eq (var-type res-mappings 'y)
             (find-type nil)))
     (is (eq (var-type res-mappings 'x)

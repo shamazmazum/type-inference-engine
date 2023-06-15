@@ -18,7 +18,7 @@
          (array    (tie:type-node 'array "A type for any array of any dimensionality"
                                   (list vector)))
          (integer  (tie:type-node 'integer "A type for integer numbers"
-                                  nil))
+                                  (list bottom)))
          (float    (tie:type-node 'float "A type for floating point numbers (any precision)"
                                   (list bottom)))
          (number   (tie:type-node 'number "A type for numbers"
