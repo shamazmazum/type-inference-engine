@@ -79,12 +79,9 @@ function database and TOP is the top type of a type system."
 (defun type-space^n (top n)
   "Return iterator which iterates through all elements of set T^n
 where T is a set of types with TOP beign the top type."
-  (if (zerop n)
-      (si:list->iterator nil)
-      (let* ((all-types (si:list->iterator (flatten-type-graph top)))
-             (iterators (loop repeat n collect all-types)))
-        (si:imap #'alex:flatten
-                 (reduce #'si:product iterators)))))
+  (if (zerop n) si:+empty+
+      (let ((all-types (si:list->iterator (flatten-type-graph top))))
+        (si:power all-types n))))
 
 (defun insert-at (list elt idx)
   (append
