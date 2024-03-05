@@ -44,33 +44,28 @@ forward inference."
                                                  :key #'statement-arguments)))
                      (cond
                        (left-hand-statement
-                        ;; The variable appears on the left-hand in one of the node's statements
+                        ;; The variable appears on the left-hand in one of the node's
+                        ;; statements.
                         (apply #'apply-restype-fn db top
                                (statement-function left-hand-statement)
                                (variables->types-forward left-hand-statement mappings)))
                        (right-hand-statements
                         ;; The variable is on the right-hand of one or more statements
-                        (reduce
-                         (alex:curry #'meet top)
-                         (map '(vector type-node)
-                              (lambda (statement)
-                                (let ((right-hand-positions
-                                       (loop for var in (statement-arguments statement)
-                                             for pos from 0 by 1
-                                             when (eq var variable) collect pos))
-                                      (right-hand-types (variables->types-forward
-                                                         statement mappings)))
-                                  (assert right-hand-positions)
-                                  (reduce
-                                   (alex:curry #'meet top)
-                                   (map '(vector type-node)
-                                        (lambda (position)
-                                          (apply #'apply-argtype-fn db top
-                                                 (statement-function statement)
-                                                 position top
-                                                 right-hand-types))
-                                        right-hand-positions))))
-                              right-hand-statements)))
+                        (reduce (alex:curry #'meet top) right-hand-statements
+                                :key (lambda (statement)
+                                       (let ((right-hand-positions
+                                              (loop for var in (statement-arguments statement)
+                                                    for pos from 0 by 1
+                                                    when (eq var variable) collect pos))
+                                             (right-hand-types (variables->types-forward
+                                                                statement mappings)))
+                                         (assert right-hand-positions)
+                                         (reduce (alex:curry #'meet top) right-hand-positions
+                                                 :key (lambda (position)
+                                                        (apply #'apply-argtype-fn db top
+                                                               (statement-function statement)
+                                                               position top
+                                                               right-hand-types)))))))
                        (t
                         ;; Variable is not present anywhere is the node's statements
                         type))))))
@@ -128,26 +123,22 @@ backward inference."
                        (t
                         ;; Variable appears on the right-hand side
                         (reduce
-                         (alex:curry #'meet top)
-                         (map '(vector type-node)
-                              (lambda (statement)
+                         (alex:curry #'meet top) right-hand-statements
+                         :key (lambda (statement)
                                 (let ((right-hand-positions
                                        (loop for var in (statement-arguments statement)
                                              for pos from 0 by 1
                                              when (eq var variable) collect pos)))
                                   (multiple-value-bind (left-hand-type right-hand-types)
-                                      (variables->types-backward statements statement top mappings)
+                                      (variables->types-backward statements statement
+                                                                 top mappings)
                                     (assert right-hand-positions)
-                                    (reduce
-                                     (alex:curry #'meet top)
-                                     (map '(vector type-node)
-                                          (lambda (position)
-                                            (apply #'apply-argtype-fn db top
-                                                   (statement-function statement)
-                                                   position left-hand-type
-                                                   right-hand-types))
-                                          right-hand-positions)))))
-                                right-hand-statements))))))))
+                                    (reduce (alex:curry #'meet top) right-hand-positions
+                                            :key (lambda (position)
+                                                   (apply #'apply-argtype-fn db top
+                                                          (statement-function statement)
+                                                          position left-hand-type
+                                                          right-hand-types)))))))))))))
          mappings)))
 
 ;; List of FLAT-NODEs -> WIDE-INFERENCE-RULE
