@@ -1,5 +1,7 @@
 (in-package :type-inference-engine/example)
 
+;; TODO: Functions like =, CONS and maybe other can be simplified to use SBCL-like DEFKNOWN
+
 ;; NB: The bottom node must have the name NIL
 (defparameter *type-system*
   (let* ((bottom   (tie:type-node nil "Bottom type. No value belongs to this type" nil))
@@ -155,12 +157,23 @@
   ;; T₁
   ;; TODO: Is it possible to handle res = NULL?
   (((eq res true)  (tie:meet top x number))
-   #+nil
-   ((eq res null)
-    (print 'hui)
-    (if (tie:types-intersect-p top x number)
-        bottom x))
    ((tie:ge (tie:type-node-order top res null)) x)))
+
+;; =
+(tie:defknown *fndb* *type-system* (=) ((x y) (res top n))
+  ((boolean . boolean)
+   (number  . number)
+   (bottom  . nil))
+  (:bottom-guard bottom)
+  ;; T₀
+  (((and (tie:types-intersect-p top x number)
+         (tie:types-intersect-p top y number))
+    boolean))
+  ;; T₁/T₂
+  (((and (tie:types-intersect-p top x number)
+         (tie:types-intersect-p top y number)
+         (tie:types-intersect-p top res boolean))
+    (tie:meet top number (ecase n (0 x) (1 y))))))
 
 ;; bool :: BOOLEAN -> a -> b -> (or a b)
 (tie:defknown *fndb* *type-system* (bool) ((c then else) (res top n))
