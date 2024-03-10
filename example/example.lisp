@@ -77,39 +77,37 @@
     (tie:meet top x sequence))))
 
 ;; Plus / minus
-(handler-bind
-    ((warning #'invoke-debugger))
-  (tie:defknown *fndb* *type-system* (+ -) ((x y) (res top n))
-    ((number  . number)
-     (integer . integer)
-     (float   . float)
-     (bottom  . nil))
-    (:bottom-guard bottom)
-    ;; T₀
-    (((or (and (eq x integer)
-               (eq y float))
-          (and (eq y integer)
-               (eq x float)))
-      ;; Type conversion rule: INTEGER ± FLOAT = FLOAT
-      float)
-     ;; Other combination of numeric types
-     ((and (tie:le (tie:type-node-order top x number))
-           (tie:le (tie:type-node-order top y number)))
-      (tie:join top x y))
-     ;; Combinations with T
-     ((and (tie:types-intersect-p top x number)
-           (tie:types-intersect-p top y number))
-      number))
-    ;; T₁ / T₂
-    ;; Can be improved, I think
-    (((and (tie:types-intersect-p top x number)
-           (tie:types-intersect-p top y number)
-           (tie:ge (tie:type-node-order top res float)))
-      (tie:meet top number
-                (if (zerop n) x y)))
-     ((eq res integer)
-      (tie:meet top integer
-                (tie:meet top x y))))))
+(tie:defknown *fndb* *type-system* (+ -) ((x y) (res top n))
+  ((number  . number)
+   (integer . integer)
+   (float   . float)
+   (bottom  . nil))
+  (:bottom-guard bottom)
+  ;; T₀
+  (((or (and (eq x integer)
+             (eq y float))
+        (and (eq y integer)
+             (eq x float)))
+    ;; Type conversion rule: INTEGER ± FLOAT = FLOAT
+    float)
+   ;; Other combination of numeric types
+   ((and (tie:le (tie:type-node-order top x number))
+         (tie:le (tie:type-node-order top y number)))
+    (tie:join top x y))
+   ;; Combinations with T
+   ((and (tie:types-intersect-p top x number)
+         (tie:types-intersect-p top y number))
+    number))
+  ;; T₁ / T₂
+  ;; Can be improved, I think
+  (((and (tie:types-intersect-p top x number)
+         (tie:types-intersect-p top y number)
+         (tie:ge (tie:type-node-order top res float)))
+    (tie:meet top number
+              (ecase n (0 x) (1 y))))
+   ((eq res integer)
+    (tie:meet top integer
+              (tie:meet top x y)))))
 
 ;; Floor / ceiling
 ;; floor   :: Num a => a -> INTEGER
@@ -189,7 +187,7 @@
     (tie:join top then else)))
   ;; T₁/T₂/T₃
   ((t
-    (case n
+    (ecase n
       (0 (tie:meet top c boolean))
       ;; These two cases can be improved, I think
       (1 then)
@@ -203,7 +201,7 @@
   ;; T₀
   ((t cons))
   ;; T₁/T₂
-  ((t (if (zerop n) x y))))
+  ((t (ecase n (0 x) (1 y)))))
 
 
 ;; Literals
