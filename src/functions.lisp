@@ -172,6 +172,37 @@ for all x_i ∈ Set of types."
         ;; Nothing to check
         t)))
 
+(sera:-> fns-equivalent-p (type-node known-function known-function)
+         (values boolean &optional))
+(defun fns-equivalent-p (top fn1 fn2)
+  "Return T if two functions are type-equivalent, i.e. their T_i
+functions return same values for the same tuples of arguments."
+  (let ((arity (known-function-arity fn1)))
+    (and (= (known-function-arity fn1)
+            (known-function-arity fn2))
+         (if (zerop arity)
+             (eq (funcall (known-function-restype-fn fn1) top)
+                 (funcall (known-function-restype-fn fn2) top))
+             (and (let ((restype-fn-1 (known-function-restype-fn fn1))
+                        (restype-fn-2 (known-function-restype-fn fn2))
+                        (typespace (type-space^n top arity)))
+                    (si:every
+                     (lambda (types)
+                       (eq (apply restype-fn-1 top types)
+                           (apply restype-fn-2 top types)))
+                     typespace))
+                  (si:every
+                   (lambda (arg)
+                     (let ((argtype-fn-1 (known-function-argtype-fn fn1))
+                           (argtype-fn-2 (known-function-argtype-fn fn2))
+                           (typespace (type-space^n top (1+ arity))))
+                       (si:every
+                        (lambda (types)
+                          (eq (apply argtype-fn-1 top arg (car types) (cdr types))
+                         (apply argtype-fn-2 top arg (car types) (cdr types))))
+                        typespace)))
+                   (si:range 0 arity)))))))
+
 (sera:-> maybe-add-function-to-fndb (hash-table type-node known-function)
          (values known-function &optional))
 (defun maybe-add-function-to-fndb (db top function)

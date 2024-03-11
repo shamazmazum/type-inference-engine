@@ -37,6 +37,7 @@
    #:defknown
    #:definitializer
    #:make-fndb
+   #:fns-equivalent-p
 
    ;; Initializer pseudo-functions
    #:initialize
