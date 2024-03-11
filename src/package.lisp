@@ -34,18 +34,29 @@
    #:print-graphviz-representation
 
    ;; Defknown facility
-   #:statement
-   #:forward-inference-rule
-   #:backward-inference-rule
    #:defknown
    #:definitializer
    #:make-fndb
+
+   ;; Initializer pseudo-functions
+   #:initialize
+   #:literal-initializer
 
    ;; Control flow & inference across statements
    #:var->type
    #:vars->types
    #:parse-code
    #:flat-control-flow-graph
+   #:statement
+   #:statement-assigns-to
+   #:statement-function
+   #:statement-arguments
+   #:flat-control-node
+   #:flat-control-node-from
+   #:flat-control-node-to
+   #:flat-control-node-statements
+   #:forward-inference-rule
+   #:backward-inference-rule
 
    ;; Global inference
    #:infer-types

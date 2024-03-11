@@ -6,9 +6,6 @@
   (restype-fn function)
   (argtype-fn (or null function)))
 
-(defparameter *fndb* (make-hash-table)
-  "A database of known primitives for our language")
-
 (sera:-> get-db-entry (hash-table symbol list)
          (values known-function &optional))
 (defun get-db-entry (db name arguments)
