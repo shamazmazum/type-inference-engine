@@ -48,7 +48,6 @@
    #:var->type
    #:vars->types
    #:parse-code
-   #:flat-control-flow-graph
    #:statement
    #:statement-assigns-to
    #:statement-function

@@ -188,10 +188,8 @@ functions for variables (vals).")
 (defun infer-types (expression)
   "Infer types in the expression using a top type system and function
 database."
-  (multiple-value-bind (graph result-variable)
+  (multiple-value-bind (nodes result-variable)
       (tie:parse-code expression *literal-initializers*)
     (values
-     (elt (tie:infer-types *fndb* *type-system*
-                           (tie:flat-control-flow-graph graph))
-          0)
+     (elt (tie:infer-types *fndb* *type-system* nodes) 0)
      result-variable)))

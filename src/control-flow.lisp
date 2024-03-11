@@ -13,21 +13,17 @@
     (pprint-fill stream (statement-arguments statement) nil)
     (princ ")" stream)))
 
-(sera:defconstructor control-flow-node
-  (statements      list) ; of statements
-  (direct-subnodes list))
-
-(defmethod print-object ((node control-flow-node) stream)
-  (print-unreadable-object (node stream :identity t)
-    (format stream "Node ~@<~a~:>"
-            (control-flow-node-statements node))))
-
 (defun check-statements (statements)
   (unless (= (length statements)
-             (length (remove-duplicates (mapcar #'statement-assigns-to statements))))
+             (length (remove-duplicates statements :key #'statement-assigns-to)))
     ;; Internal check, so I do not use any distinct condition class
     (error "Wrong statement: duplicate variables on the left-hand side: ~a"
            statements)))
+
+(sera:defconstructor ir-node
+  (label      symbol)
+  (goes-to    list)
+  (statements list))
 
 (sera:-> literal-initializer (t list)
          (values (or null symbol) &optional))
@@ -37,30 +33,164 @@ with the type of that literal or NIL otherwise."
   (let ((entry (find-if (alex:rcurry #'funcall code) table :key #'car)))
     (cdr entry)))
 
-(sera:-> literal-initializer-node (symbol)
-         (values control-flow-node symbol &optional))
-(defun literal-initializer-node (initializer-function)
-  (let ((var-name (gensym "CONST")))
-    (values
-     (control-flow-node
-      (list (statement var-name initializer-function nil))
-      nil)
-     var-name)))
+(defun handle-literals (expr literal-initializers)
+  "Return @c(expr) with literals replaced by corresponding literal
+initializer functions."
+  (labels ((%go (expr)
+             (let ((initializer (literal-initializer expr literal-initializers)))
+               (cond
+                 (initializer
+                  ;; Replace a literal with a call to a special function
+                  ;; ("literal initializer") which returns a value of needed
+                  ;; type.
+                  (list initializer))
+                 ((symbolp expr)
+                  ;; This is a variable
+                  expr)
+                 ((atom expr)
+                  (error 'unknown-literal :code expr))
+                 (t
+                  (cons (car expr)
+                        (mapcar #'%go (cdr expr))))))))
+    (%go expr)))
 
-(sera:-> identity-node (symbol)
-         (values control-flow-node symbol &optional))
-(defun identity-node (variable)
-  (values
-   (control-flow-node
-    (list (statement variable 'identity (list variable)))
-    nil)
-   variable))
+(defun collect-free-variables (expr)
+  "Return a list of free variables in an expression"
+  (labels ((%go (expr)
+             (if (symbolp expr) (list expr)
+                 (reduce #'append (cdr expr)
+                         :initial-value nil
+                         :key #'%go))))
+    (%go expr)))
 
-;; TODO: 1) Produce less nodes (our assignment statements are parallel)
-;;       2) Add support for special forms like if and goto
-(sera:-> parse-code (t &optional list boolean)
-         (values (or control-flow-node null) symbol &optional))
-(defun parse-code (code &optional literal-initializers recursive-p)
+(defun assign-depth (expr)
+  "Convert an S-expression into a list of pairs @c((depth . funcall))
+where greater depth means earlier execution."
+  (labels ((%go (expr level)
+             (if (not (symbolp expr))
+                 (reduce #'append (cdr expr)
+                         :initial-value (list (cons level expr))
+                         :key (lambda (expr)
+                                (%go expr (1+ level)))))))
+    (%go expr 0)))
+
+(defun group-by-depth (subexprs)
+  "Group funcalls by precedence of execution"
+  (let ((groups (sera:assort subexprs :test #'= :key  #'car)))
+    (mapcar (alex:curry #'mapcar #'cdr) groups)))
+
+(defun allocate-variables (groups)
+  "Allocate intermediate variables for groups of funcalls"
+  (assert (= (length (first groups)) 1))
+  (let ((res-var (gensym "RES")))
+    (cons
+     (cons (caar groups) res-var)
+     (reduce #'append (cdr groups)
+             :key (lambda (group)
+                    (mapcar
+                     (lambda (expr)
+                       (cons expr (gensym "VAR")))
+                     group))))))
+
+(defun convert-to-statements (groups variable-mappings)
+  "Convert groups of funcalls (which look more or less like an ordinary lisp
+code) to a group of assignment statements. Each group of statements can be
+considered as a parallel assignment statement."
+  (mapcar
+   (lambda (group)
+     (mapcar
+      (lambda (expr)
+        (let ((variable (alex:assoc-value variable-mappings expr :test #'eq)))
+          (statement
+           variable   ; an intermediate variable to assign result to
+           (car expr) ; name of a function to call
+           (mapcar    ; argument variables
+            (lambda (argument)
+              (if (symbolp argument) argument
+                  (alex:assoc-value variable-mappings argument :test #'eq)))
+            (cdr expr)))))
+      group))
+   (reverse groups)))
+
+(defun ir-nodes (groups sf-label)
+  "Convert groups of statements to intermediate representation node (which has a
+label and a list of labels to which it transfers the control). The last node
+transfers control to a node labeled with @c(sf-label)."
+  (labels ((collect-lbls (n acc)
+           (if (zerop n) acc (collect-lbls (1- n) (cons (gensym "LBL") acc)))))
+    (let ((lbls (collect-lbls (length groups) (list sf-label))))
+      (mapcar
+       (lambda (group label next-label)
+         (ir-node label (list next-label) group))
+       groups lbls (cdr lbls)))))
+
+(defun add-sf-node (nodes variables sf-label)
+  "Add start/finish node on top of the nodes. The start/finish node has a label
+@c(sf-label) and initializes variables @c(variables)."
+  (let ((first-label (ir-node-label (car nodes))))
+    (cons
+     (ir-node sf-label (list first-label)
+              (mapcar
+               (lambda (variable)
+                 (statement variable 'initialize nil))
+               variables))
+     nodes)))
+
+(defun parse-expr (expr &optional literal-initializers)
+  "Parse an expression (nested function calls) to intermediate representation"
+  (let* ((no-literals (handle-literals (if (atom expr) (list 'identity expr) expr)
+                                       literal-initializers))
+         (expr-groups (group-by-depth (assign-depth no-literals)))
+         (variable-mappings (allocate-variables expr-groups))
+         (statement-groups (convert-to-statements expr-groups variable-mappings))
+         (sf-label (gensym "S/F"))
+         (ir-nodes (ir-nodes statement-groups sf-label)))
+    (add-sf-node ir-nodes
+                 (append (remove-duplicates (collect-free-variables no-literals)
+                                            :test #'eq)
+                         (mapcar #'cdr variable-mappings))
+                 sf-label)))
+
+;; A structure to represent a control flow graph as a flat list
+(sera:defconstructor flat-control-node
+  (from       list)
+  (to         list)
+  (statements list))
+
+(defun who-goes-to (nodes node)
+  "Get nodes which transfer control to @c(node)."
+  (let ((label (ir-node-label node)))
+    (remove-if
+     (lambda (node)
+       (not (member label (ir-node-goes-to node))))
+     nodes)))
+
+(defun goes-to (nodes node)
+  "Get nodes to which @c(node) transfers control."
+  (let ((goes-to (ir-node-goes-to node)))
+    (mapcar
+     (lambda (label)
+       (find label nodes :key #'ir-node-label))
+     goes-to)))
+
+(defun ir-nodes->flat-nodes (ir-nodes)
+  "Resolve labels in the intermediate representation"
+  (mapcar
+   (lambda (node)
+     (flat-control-node
+      (mapcar
+       (lambda (node) (position node ir-nodes))
+       (who-goes-to ir-nodes node))
+      (mapcar
+       (lambda (node) (position node ir-nodes))
+       (goes-to ir-nodes node))
+      (ir-node-statements node)))
+   ir-nodes))
+
+;; TODO: Add support for special forms like if and goto
+(sera:-> parse-code (t &optional list)
+         (values list symbol &optional))
+(defun parse-code (code &optional literal-initializers)
   "Parse an expression @c(code) and construct a control flow
 graph. @c(Literal-initializers) is an associative list which contains
 predicates as keys and initializer functions as values. When
@@ -83,95 +213,24 @@ constant variable with a value of type of the literal. For example:
 This function returns a control flow graph and the name of a variable
 where the result of expression is stored after evaluation of a
 statement."
-  (let ((literal-initializer (literal-initializer code literal-initializers)))
-    (cond
-      (literal-initializer
-       ;; Initialize result-var with a value of the literal's type.
-       (literal-initializer-node literal-initializer))
-      ((symbolp code)
-       (if recursive-p
-           ;; This is an evaluated argument inside other statement,
-           ;; create no new node.
-           (values nil code)
-           ;; This is just a variable. Transform this to VAR ← IDENTITY(VAR)
-           (identity-node code)))
-      ((atom code)
-       ;; Seems like an unknwon literal
-       (error 'unknown-literal :code code))
-      (t
-       ;; Otherwise it is a function call (no let, if or goto special
-       ;; forms by now).
-       (destructuring-bind (fnname . args) code
-         (let* ((argvars-and-subnodes
-                 (loop for arg in args collect
-                       (multiple-value-call #'cons
-                         (parse-code arg literal-initializers t))))
-                (subnodes (mapcar #'car argvars-and-subnodes))
-                (argvars  (mapcar #'cdr argvars-and-subnodes))
-                (result-var (gensym "VAR")))
-           (values
-            (control-flow-node
-             (list
-              (statement result-var fnname argvars))
-             (remove nil subnodes))
-            result-var)))))))
-
-(sera:-> flatten-control-flow (control-flow-node)
-         (values list &optional))
-(defun flatten-control-flow (top)
-  "Return a content of the control flow graph as a flat list."
-  (fold-graph
-   top
-   (lambda (acc node)
-     (cons node acc))
-   nil #'control-flow-node-direct-subnodes))
-
-;; A structure to represent a control flow graph as a flat list
-(sera:defconstructor flat-control-node
-  (from       list)
-  (to         list)
-  (statements list))
+  (let ((ir-nodes (parse-expr code literal-initializers)))
+    (values
+     (ir-nodes->flat-nodes ir-nodes)
+     (let ((statements (ir-node-statements (car (last ir-nodes)))))
+       (assert (= (length statements) 1))
+       (statement-assigns-to (first statements))))))
 
 (sera:-> program-variables (list)
          (values list &optional))
 (defun program-variables (flat-graph)
+  "Collect all variables occuring in the program."
   (remove-duplicates
-   (alex:flatten
-    (mapcar
-     (lambda (flat-node)
-       (mapcar
-        (lambda (statement)
-          (cons (statement-assigns-to statement)
-                (statement-arguments  statement)))
-        (flat-control-node-statements flat-node)))
-     flat-graph))))
-
-;; TODO: This implementation does not support branching yet.
-(sera:-> flat-control-flow-graph (control-flow-node)
-         (values list &optional))
-(defun flat-control-flow-graph (node)
-  "Convert control flow graph returned from @c(parse-code) to a flat
-representation understandable by @c(infer-types)."
-  (let* ((statements-list
-          (mapcar #'control-flow-node-statements
-                  (flatten-control-flow node)))
-         (length (length statements-list))
-         (flat-graph
-          (si:collect
-              (si:imap
-               (lambda (statements i)
-                 ;; 1+ means we'll add initialization node later
-                 (flat-control-node (list (mod (1- i) (1+ length)))
-                                    (list (mod (1+ i) (1+ length)))
-                                    statements))
-               (si:list->iterator statements-list)
-               (si:count-from 1)))))
-    ;; Add initialization node
-    (cons
-     (flat-control-node
-      (list length) (list 1)
-      (mapcar
-       (lambda (variable)
-         (statement variable 'initialize nil))
-       (program-variables flat-graph)))
-     flat-graph)))
+   (reduce #'append flat-graph
+           :key (lambda (node)
+                  (reduce #'append (flat-control-node-statements node)
+                          :key (lambda (statement)
+                                 (cons (statement-assigns-to statement)
+                                       (statement-arguments  statement)))
+                          :initial-value nil))
+           :initial-value nil)
+   :test #'eq))
