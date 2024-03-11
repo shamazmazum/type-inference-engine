@@ -41,35 +41,6 @@ function database and TOP is the top type of a type system."
          (argtype-fn (known-function-argtype-fn db-entry)))
     (apply argtype-fn top narg res-type arg-types)))
 
-;; For testing
-(sera:-> unary-function-monotonic-p
-         (type-node
-          (sera:-> (type-node) (values type-node &optional)))
-         (values boolean &optional))
-(defun unary-function-monotonic-p (top fn)
-  "Check if an unary function TYPE -> TYPE is monotonic."
-  (every
-   #'identity
-   (loop for tails on (flatten-type-graph top)
-         for t1 = (car tails) append
-         (loop for t2 in tails collect
-               (let* ((arg-order (type-node-order top t1 t2))
-                      (res-order (type-node-order top
-                                                  (funcall fn t1)
-                                                  (funcall fn t2)))
-                      (monotonicp (or
-                                   ;; t1 ≤ t2 and f(t1) ≤ f(t2)
-                                   (and (le arg-order)
-                                        (le res-order))
-                                   ;; t1 ≥ t2 and f(t1) ≥ f(t2)
-                                   (and (ge arg-order)
-                                        (ge res-order))
-                                   ;; No order defined
-                                   (null arg-order))))
-                 (unless monotonicp
-                   (warn "Function ~a is not monotonic for types: ~a, ~a~%"
-                         fn t1 t2))
-                 monotonicp)))))
 
 (sera:-> type-space^n (type-node alexandria:non-negative-fixnum)
          (values si:iterator &optional))
@@ -79,6 +50,37 @@ where T is a set of types with TOP beign the top type."
   (if (zerop n) si:+empty+
       (let ((all-types (si:list->iterator (flatten-type-graph top))))
         (si:power all-types n))))
+
+;; For testing
+(sera:-> unary-function-monotonic-p
+         (type-node
+          (sera:-> (type-node) (values type-node &optional)))
+         (values boolean &optional))
+(defun unary-function-monotonic-p (top fn)
+  "Check if an unary function TYPE -> TYPE is monotonic."
+  (let* ((types (si:list->iterator (flatten-type-graph top)))
+         (pairs (si:product types types)))
+    (si:every
+     (lambda (pair)
+       (destructuring-bind (t1 . t2) pair
+         (let* ((arg-order (type-node-order top t1 t2))
+                (res-order (type-node-order top
+                                            (funcall fn t1)
+                                            (funcall fn t2)))
+                (monotonicp (or
+                             ;; t1 ≤ t2 and f(t1) ≤ f(t2)
+                             (and (le arg-order)
+                                  (le res-order))
+                             ;; t1 ≥ t2 and f(t1) ≥ f(t2)
+                             (and (ge arg-order)
+                                  (ge res-order))
+                             ;; No order defined
+                             (null arg-order))))
+           (unless monotonicp
+             (warn "Function ~a is not monotonic for types: ~a, ~a~%"
+                   fn t1 t2))
+           monotonicp)))
+     pairs)))
 
 (defun insert-at (list elt idx)
   (append
@@ -95,18 +97,17 @@ arguments."
   (if (= arity 1)
       (unary-function-monotonic-p top fn)
       (let ((type-space (type-space^n top (1- arity))))
-        (every
-         #'identity
-         (loop for i below arity append
-               (si:collect
-                   (si:imap
-                    (lambda (fixed-types)
-                      (unary-function-monotonic-p
-                       top
-                       (lambda (x)
-                         (let ((arguments (insert-at fixed-types x i)))
-                           (apply fn arguments)))))
-                    type-space)))))))
+        (si:every
+         (lambda (position)
+           (si:every
+            (lambda (fixed-types)
+              (unary-function-monotonic-p
+               top
+               (lambda (x)
+                 (let ((arguments (insert-at fixed-types x position)))
+                   (apply fn arguments)))))
+            type-space))
+         (si:range 0 arity)))))
 
 (sera:-> unary-function-narrowing-p
          (type-node
@@ -149,28 +150,26 @@ for all x_i ∈ Set of types."
 (defun known-function-correct-p (top function)
   "Return T if a knwon function FUNCTION is correctly defined."
   (let ((arity (known-function-arity function)))
-    (if (not (zerop arity))
+    (if (zerop arity) t ; Nothing to check
         (and
-         ;; T_0 must be monotone on every argument
+         ;; T_0 must be monotonic on every argument
          (function-monotonic-p
           top arity
           (alex:curry (known-function-restype-fn function) top))
-         ;; T_i, i > 0 must be monotone on every argument
-         (every
-          #'identity
-          (loop for i below arity collect
-                (function-monotonic-p
-                 top (1+ arity)
-                 (alex:curry (known-function-argtype-fn function) top i))))
+         ;; T_i, i > 0 must be monotonic on every argument
+         (si:every
+          (lambda (i)
+            (function-monotonic-p
+             top (1+ arity)
+             (alex:curry (known-function-argtype-fn function) top i)))
+          (si:range 0 arity))
          ;; T_i, i > 0 must narrow i-th argument
-         (every
-          #'identity
-          (loop for i below arity collect
-                (function-narrowing-p
-                 top (1+ arity) (1+ i)
-                 (alex:curry (known-function-argtype-fn function) top i)))))
-        ;; Nothing to check
-        t)))
+         (si:every
+          (lambda (i)
+            (function-narrowing-p
+             top (1+ arity) (1+ i)
+             (alex:curry (known-function-argtype-fn function) top i)))
+          (si:range 0 arity))))))
 
 (sera:-> fns-equivalent-p (type-node known-function known-function)
          (values boolean &optional))
