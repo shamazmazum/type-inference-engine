@@ -588,6 +588,7 @@ CL-USER> (tie-example:infer-types '(1+ 2))
       @title(Known functions)
       @cl:with-package[name="type-inference-engine"](
          @cl:doc(macro defknown)
+         @cl:doc(macro defknown*)
          @cl:doc(macro definitializer)
          @cl:doc(function make-fndb)
       )

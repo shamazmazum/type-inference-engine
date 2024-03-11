@@ -1,6 +1,7 @@
 (in-package :type-inference-engine/example)
 
-;; TODO: Functions like =, CONS and maybe other can be simplified to use SBCL-like DEFKNOWN
+;; TODO: Functions like FLOOR (?), CEILING (?)
+;; and maybe other can be simplified to use SBCL-like DEFKNOWN.
 
 ;; NB: The bottom node must have the name NIL
 (defparameter *type-system*
@@ -65,19 +66,10 @@
     (tie:meet top x number))))
 
 ;; length :: Seq a => a -> INTEGER
-(tie:defknown *fndb* *type-system* (length) ((x) (res top n))
-  ((integer  . integer)
-   (sequence . sequence)
-   (bottom   . nil))
-  (:bottom-guard bottom)
-  ;; T₀
-  (((tie:types-intersect-p top x sequence) integer))
-  ;; T₁
-  (((tie:ge (tie:type-node-order top res integer))
-    (tie:meet top x sequence))))
+(tie:defknown* *fndb* *type-system* (length) (sequence) integer)
 
 ;; Plus / minus
-(tie:defknown *fndb* *type-system* (+ -) ((x y) (res top n))
+(tie:defknown *fndb* *type-system* (* + -) ((x y) (res top n))
   ((number  . number)
    (integer . integer)
    (float   . float)
@@ -112,33 +104,10 @@
 ;; Floor / ceiling
 ;; floor   :: Num a => a -> INTEGER
 ;; ceiling :: Num a => a -> INTEGER
-(tie:defknown *fndb* *type-system* (floor ceiling) ((x) (res top n))
-  ((number  . number)
-   (integer . integer)
-   (bottom  . nil))
-  (:bottom-guard bottom)
-  ;; T₀
-  (((tie:types-intersect-p top x number) integer))
-  ;; T₁
-  (((tie:ge (tie:type-node-order top res integer))
-    (tie:meet top x number))))
+(tie:defknown* *fndb* *type-system* (floor ceiling) (number) integer)
 
 ;; ELT
-(tie:defknown *fndb* *type-system* (elt) ((seq idx) (res top n))
-  ((integer  . integer)
-   (sequence . sequence)
-   (bottom   . nil))
-  (:bottom-guard bottom)
-  ;; T₀
-  (((and (tie:types-intersect-p top seq sequence)
-         (tie:types-intersect-p top idx integer))
-    top))
-  ;; T₁/T₂
-  (((or (tie:types-intersect-p top seq sequence)
-        (tie:types-intersect-p top idx integer))
-    (if (zerop n)
-        (tie:meet top seq sequence)
-        (tie:meet top idx integer)))))
+(tie:defknown* *fndb* *type-system* (elt) (sequence integer) t)
 
 ;; NUMBERP
 (tie:defknown *fndb* *type-system* (numberp) ((x) (res top n))
@@ -157,21 +126,7 @@
   (((eq res true)  (tie:meet top x number))
    ((tie:ge (tie:type-node-order top res null)) x)))
 
-;; =
-(tie:defknown *fndb* *type-system* (=) ((x y) (res top n))
-  ((boolean . boolean)
-   (number  . number)
-   (bottom  . nil))
-  (:bottom-guard bottom)
-  ;; T₀
-  (((and (tie:types-intersect-p top x number)
-         (tie:types-intersect-p top y number))
-    boolean))
-  ;; T₁/T₂
-  (((and (tie:types-intersect-p top x number)
-         (tie:types-intersect-p top y number)
-         (tie:types-intersect-p top res boolean))
-    (tie:meet top number (ecase n (0 x) (1 y))))))
+(tie:defknown* *fndb* *type-system* (=) (number number) boolean)
 
 ;; bool :: BOOLEAN -> a -> b -> (or a b)
 (tie:defknown *fndb* *type-system* (bool) ((c then else) (res top n))
@@ -194,14 +149,7 @@
       (2 else)))))
 
 ;; cons :: a -> b -> CONS
-(tie:defknown *fndb* *type-system* (cons) ((x y) (res top n))
-  ((bottom . nil)
-   (cons   . cons))
-  (:bottom-guard bottom)
-  ;; T₀
-  ((t cons))
-  ;; T₁/T₂
-  ((t (ecase n (0 x) (1 y)))))
+(tie:defknown* *fndb* *type-system* (cons) (t t) cons)
 
 
 ;; Literals

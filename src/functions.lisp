@@ -198,7 +198,7 @@ functions return same values for the same tuples of arguments."
                        (si:every
                         (lambda (types)
                           (eq (apply argtype-fn-1 top arg (car types) (cdr types))
-                         (apply argtype-fn-2 top arg (car types) (cdr types))))
+                              (apply argtype-fn-2 top arg (car types) (cdr types))))
                         typespace)))
                    (si:range 0 arity)))))))
 
@@ -356,6 +356,42 @@ and adds a corresponding entry about the function @c(length) in
                `(%defknown ,db-var ,top-var ,name ,arguments-clause ,type-bindings-clause
                            (:bottom-guard ,bottom-guard)
                            ,t0-cond-clauses ,t1+-cond-clauses)))))
+
+(defmacro defknown* (db top names arg-types res-type)
+  "Add functions with names contained in the list @c(names) to the
+function database @c(fndb). This is a simplified SBCL-like version of
+@c(DEFKNOWN). Everything what is known about added functions is that
+they take arguments of types @c(arg-types) and return a value of type
+@c(res-type)."
+  (when (null arg-types)
+    (error "Number of arguments must be greater than 0"))
+  (let ((variables (loop repeat (length arg-types) collect (gensym "VAR")))
+        (tmp1      (loop repeat (length arg-types) collect (gensym "VAR")))
+        (tmp2      (gensym "RES"))
+        (bottom    (gensym "BOTTOM"))
+        (res-var   (gensym "RES"))
+        (top-var   (gensym "TOP"))
+        (arg-var   (gensym "ARG")))
+    `(defknown ,db ,top ,names (,variables (,res-var ,top-var ,arg-var))
+       ,(cons
+         `(,bottom . nil)
+         (loop for type in (cons res-type arg-types)
+               for var  in (cons tmp2 tmp1)
+               collect `(,var . ,type)))
+       (:bottom-guard ,bottom)
+       (((and ,@(loop for var  in variables
+                      for type in tmp1
+                      collect `(types-intersect-p ,top-var ,var ,type)))
+         ,tmp2))
+       (((and ,@(loop for var  in variables
+                      for type in tmp1
+                      collect `(types-intersect-p ,top-var ,var ,type))
+              (types-intersect-p ,top-var ,res-var ,tmp2))
+         (ecase ,arg-var
+           ,@(loop for i below (length arg-types)
+                   for type in tmp1
+                   for var in variables collect
+                   `(,i (meet ,top-var ,var ,type)))))))))
 
 (defmacro definitializer (db top name type)
   "Add a function with the name @c(name) which takes zero arguments

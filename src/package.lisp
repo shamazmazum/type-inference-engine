@@ -35,6 +35,7 @@
 
    ;; Defknown facility
    #:defknown
+   #:defknown*
    #:definitializer
    #:make-fndb
    #:fns-equivalent-p
