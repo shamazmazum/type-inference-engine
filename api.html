@@ -172,6 +172,11 @@ and T₁
 </code></pre><p>
 and adds a corresponding entry about the function <code>length</code> in
 <code>*fndb*</code>.</p></div></div>
+         <div class="codex-doc-node codex-operator codex-macro"><code class="codex-name">defknown*</code><code class="codex-lambda-list">(db top names arg-types res-type)</code><div class="codex-docstring">Add functions with names contained in the list <code>names</code> to the
+function database <code>fndb</code>. This is a simplified SBCL-like version of
+<code>DEFKNOWN</code>. Everything what is known about added functions is that
+they take arguments of types <code>arg-types</code> and return a value of type
+<code>res-type</code>.</div></div>
          <div class="codex-doc-node codex-operator codex-macro"><code class="codex-name">definitializer</code><code class="codex-lambda-list">(db top name type)</code><div class="codex-docstring">Add a function with the name <code>name</code> which takes zero arguments
 and returns a value of type <code>type</code> to FNDB <code>db</code>
 <pre><code class="lisp">(definitializer db top name type)
@@ -190,7 +195,7 @@ is equivalent to
    <h1 id="code-parsing">Code parsing</h1>
       <b>NB</b>: This API is subject to change.
       
-         <div class="codex-doc-node codex-operator codex-function"><code class="codex-name">parse-code</code><code class="codex-lambda-list">(code &amp;optional literal-initializers recursive-p)</code><div class="codex-docstring"><p>Parse an expression <code>code</code> and construct a control flow
+         <div class="codex-doc-node codex-operator codex-function"><code class="codex-name">parse-code</code><code class="codex-lambda-list">(code &amp;optional literal-initializers)</code><div class="codex-docstring"><p>Parse an expression <code>code</code> and construct a control flow
 graph. <code>Literal-initializers</code> is an associative list which contains
 predicates as keys and initializer functions as values. When
 <code>parse-code</code> sees a term of the expression, it runs predicates in
@@ -209,8 +214,7 @@ constant variable with a value of type of the literal. For example:
 </code></pre><p>This function returns a control flow graph and the name of a variable
 where the result of expression is stored after evaluation of a
 statement.</p></div></div>
-         <div class="codex-doc-node codex-operator codex-function"><code class="codex-name">flat-control-flow-graph</code><code class="codex-lambda-list">(node)</code><div class="codex-docstring">Convert control flow graph returned from <code>parse-code</code> to a flat
-representation understandable by <code>infer-types</code>.</div></div>
+         <div class="codex-error codex-no-node">No node with name <code>flat-control-flow-graph</code>.</div>
       
    
    <h1 id="type-inference">Type inference</h1>
