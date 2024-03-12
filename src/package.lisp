@@ -12,7 +12,10 @@
    #:arity-error
    #:unknown-function
    #:unknown-literal
+   #:unknown-variable
    #:fndb-entry-exists
+   #:malformed-defun
+   #:typecheck-error
 
    ;; Graphs
    #:fold-graph
@@ -61,6 +64,10 @@
 
    ;; Global inference
    #:infer-types
+
+   ;; Side-effects of compilation
+   #:function-info
+   #:compile-function
 
    ;; Restarts
    #:fndb-abort

@@ -63,11 +63,17 @@ initializer functions."
                          :key #'%go))))
     (%go expr)))
 
-(defun assign-depth (expr)
+(defun assign-depth (expr &optional parameter-vars)
   "Convert an S-expression into a list of pairs @c((depth . funcall))
-where greater depth means earlier execution."
+where greater depth means earlier execution. The list
+@c(parameter-vars) can optionally contain known variables, so this
+function will signal @c(unknown-variable) condition if it encounters a
+variable not present in this list."
   (labels ((%go (expr level)
-             (if (not (symbolp expr))
+             (if (symbolp expr)
+                 (and parameter-vars
+                      (not (member expr parameter-vars :test #'eq))
+                      (error 'unknown-variable :variable expr))
                  (reduce #'append (cdr expr)
                          :initial-value (list (cons level expr))
                          :key (lambda (expr)
@@ -150,6 +156,28 @@ transfers control to a node labeled with @c(sf-label)."
                                             :test #'eq)
                          (mapcar #'cdr variable-mappings))
                  sf-label)))
+
+(defun parse-defun (form &optional literal-initializers)
+  "Parse definition of a new function to intermediate representation"
+  (unless (= (length form) 4)
+    (error 'malformed-defun :code form))
+  (destructuring-bind (defun-symb name parameters expr)
+      form
+    (unless (eq defun-symb 'defun)
+      (error 'malformed-defun :code form))
+    (let* ((no-literals (handle-literals (if (atom expr) (list 'identity expr) expr)
+                                         literal-initializers))
+           (expr-groups (group-by-depth (assign-depth no-literals parameters)))
+           (variable-mappings (allocate-variables expr-groups))
+           (statement-groups (convert-to-statements expr-groups variable-mappings))
+           (sf-label (gensym "S/F"))
+           (ir-nodes (ir-nodes statement-groups sf-label))
+           (last-statement-group (ir-node-statements (car (last ir-nodes)))))
+      (assert (= (length last-statement-group) 1))
+      (values
+       (add-sf-node ir-nodes (append parameters (mapcar #'cdr variable-mappings)) sf-label)
+       name parameters
+       (statement-assigns-to (first last-statement-group))))))
 
 ;; A structure to represent a control flow graph as a flat list
 (sera:defconstructor flat-control-node

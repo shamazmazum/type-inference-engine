@@ -43,6 +43,43 @@ incorrectly."))
   (:documentation "Signaled when S-expression looks like a literal but
 its type cannot be determined."))
 
+(define-condition unknown-variable (inference-error)
+  ((variable :reader        unknown-variable
+             :initarg       :variable
+             :documentation "Name of unknown variable"))
+  (:report
+   (lambda (c s)
+     (format s "Unknown variable encountered: ~a"
+             (unknown-variable c))))
+  (:documentation "Signaled when an unknown variable is encountered
+when parsing @c(defun)."))
+
+(define-condition malformed-defun (inference-error)
+  ((code :reader        malformed-defun-code
+         :initarg       :code
+         :documentation "Malformed defun form"))
+  (:report
+   (lambda (c s)
+     (format s "Malformed defun form: ~a"
+             (malformed-defun-code c))))
+  (:documentation "Signaled when parsing malformed @c(defun)."))
+
+(define-condition typecheck-error (inference-error functional-condition)
+  ((argtypes :reader        typecheck-error-argtypes
+             :initarg       :argtypes
+             :documentation "Types of arguments")
+   (restype  :reader        typecheck-error-restype
+             :initarg       :restype
+             :documentation "Type of result"))
+  (:report
+   (lambda (c s)
+     (format s "Type check error for function ~a: ~a → ~a"
+             (function-name c)
+             (typecheck-error-argtypes c)
+             (typecheck-error-restype c))))
+  (:documentation "Signaled when a definition of a function contains
+type errors"))
+
 (define-condition incorrect-definition (inference-error functional-condition)
   ()
   (:report

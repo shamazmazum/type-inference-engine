@@ -14,7 +14,8 @@ of Variable Types\" by Marc Kaplan and Jeffrey Ullman."
                  (:file "type-system")
                  (:file "functions")
                  (:file "control-flow")
-                 (:file "inference-rules"))
+                 (:file "inference-rules")
+                 (:file "compilation"))
     :depends-on (:alexandria
                  :serapeum
                  :stateless-iterators)
