@@ -126,6 +126,27 @@
   (((eq res true)  (tie:meet top x number))
    ((tie:ge (tie:type-node-order top res null)) x)))
 
+;; NOT
+(tie:defknown *fndb* *type-system* (not) ((x) (res top n))
+  ((boolean . boolean)
+   (null    . null)
+   (true    . true)
+   (bottom  . nil))
+  (:bottom-guard bottom)
+  ;; T₀
+  (((and (tie:ge (tie:type-node-order top x null))
+         (eq (tie:meet top x boolean) null))
+    true)
+   ((eq x true) null)
+   ((tie:ge (tie:type-node-order top x boolean)) boolean))
+  ;; T₁
+  (((eq res true)
+    (tie:meet top x null))
+   ((eq res null)
+    (tie:meet top x true))
+   ((tie:types-intersect-p top res boolean)
+    (tie:meet top x boolean))))
+
 (tie:defknown* *fndb* *type-system* (=) (number number) boolean)
 
 ;; bool :: BOOLEAN -> a -> b -> (or a b)
@@ -144,9 +165,8 @@
   ((t
     (ecase n
       (0 (tie:meet top c boolean))
-      ;; These two cases can be improved, I think
-      (1 then)
-      (2 else)))))
+      (1 (if (eq c true) (tie:meet top res then) then))
+      (2 (if (eq c null) (tie:meet top res else) else))))))
 
 ;; cons :: a -> b -> CONS
 (tie:defknown* *fndb* *type-system* (cons) (t t) cons)
@@ -193,3 +213,6 @@ database."
     (values
      (elt (tie:infer-types *fndb* *type-system* nodes) 0)
      result-variable)))
+
+(defun compile-function (form)
+  (tie:compile-function form *fndb* *type-system* *literal-initializers*))
