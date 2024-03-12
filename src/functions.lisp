@@ -202,13 +202,14 @@ functions return same values for the same tuples of arguments."
                         typespace)))
                    (si:range 0 arity)))))))
 
-(sera:-> maybe-add-function-to-fndb (hash-table type-node known-function)
+(sera:-> maybe-add-function-to-fndb (hash-table type-node known-function &optional boolean)
          (values known-function &optional))
-(defun maybe-add-function-to-fndb (db top function)
+(defun maybe-add-function-to-fndb (db top function &optional skip-checks-p)
   "Add a known information about FUNCTION to a database DB. If
 FUNCTION is already in the database, signal a warning. TOP is the top
 type of used type system."
-  (unless (known-function-correct-p top function)
+  (unless (or skip-checks-p
+              (known-function-correct-p top function))
     (error 'incorrect-definition
            :name (known-function-name function)))
   (with-simple-restart (fndb-abort "Abort insertion to fndb")

@@ -45,5 +45,6 @@
                              argtypes actual-argtypes)
                       (types-intersect-p top-type restype actual-restype))
                  (meet top-type (nth arg argtypes) (nth arg actual-argtypes)))
-                (t bottom))))))
+                (t bottom)))))
+       t)
       (function-info name argtypes restype top-type))))
