@@ -6,7 +6,7 @@
   (arguments  list)) ; of variables (symbols)
 
 (defmethod print-object ((statement statement) stream)
-  (print-unreadable-object (statement stream :identity t :type t)
+  (print-unreadable-object (statement stream :type t)
     (format stream "~a ← (~a "
             (statement-assigns-to statement)
             (statement-function   statement))
