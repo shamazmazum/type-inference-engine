@@ -15,7 +15,9 @@
            (bottom (find-type-node nil top-type)))
       (when (find bottom types :key #'cdr)
         (error 'typecheck-error :name name :argtypes argtypes :restype restype))
-      (maybe-add-function-to-fndb
-       fndb top-type
-       (simple-known-function
-        name argtypes restype)))))
+      (handler-bind
+          ((fndb-entry-exists #'fndb-replace))
+        (maybe-add-function-to-fndb
+         fndb top-type
+         (simple-known-function
+          name argtypes restype))))))

@@ -293,6 +293,16 @@ type of used type system."
       (setf (gethash name db) function)))
   function)
 
+(defun fndb-replace (c)
+  "Invoke FNDB-REPLACE restart"
+  (declare (ignore c))
+  (invoke-restart 'fndb-replace))
+
+(defun fndb-abort (c)
+  "Invoke FNDB-ABORT restart"
+  (declare (ignore c))
+  (invoke-restart 'fndb-abort))
+
 (sera:-> make-simple-function (symbol type-node list symbol)
          (values simple-known-function &optional))
 (defun make-simple-function (name top arg-type-names res-type-name)
