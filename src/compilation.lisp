@@ -29,7 +29,7 @@
         (error 'typecheck-error :name name :argtypes argtypes :restype restype))
       (maybe-add-function-to-fndb
        fndb top-type
-       (known-function
+       (extended-known-function
         name arity
         (lambda (top-type &rest actual-argtypes)
           (cond

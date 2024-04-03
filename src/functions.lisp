@@ -1,46 +1,129 @@
 (in-package :type-inference-engine)
 
-(sera:defconstructor known-function
-  (name       symbol)
-  (arity      alex:non-negative-fixnum)
-  (restype-fn function)
-  (argtype-fn (or null function)))
+(sera:defstruct-read-only
+    (known-function
+     (:constructor known-function (name)))
+  (name :type symbol))
 
-(sera:-> get-db-entry (hash-table symbol list)
+(sera:defstruct-read-only
+    (simple-known-function
+     (:constructor simple-known-function (name arg-types res-type))
+     (:include known-function))
+  (arg-types :type list)
+  (res-type  :type type-node))
+
+(sera:defstruct-read-only
+    (extended-known-function
+     (:constructor extended-known-function (name arity restype-fn argtype-fn))
+     (:include known-function))
+  (arity      :type alex:non-negative-fixnum)
+  (restype-fn :type function)
+  (argtype-fn :type (or null function)))
+
+(defgeneric known-function-arity (fndb-entry)
+  (:documentation "Return the arity of a function"))
+
+(defgeneric known-function-apply-restype-fn (fndb-entry top arg-types)
+  (:documentation "Apply forward inference function for a primitive
+function known as FNDB-ENTRY in the database and argument types
+ARG-TYPES. TOP is the top type of a type system."))
+
+(defgeneric known-function-apply-argtype-fn (fndb-entry top narg res-type arg-types)
+  (:documentation "Apply NARG-th backward inference function for a
+primitive function known as FNDB-ENTRY in the database and argument
+types ARG-TYPES, result type RES-TYPE. TOP is the top type of a type
+system."))
+
+(defgeneric %known-function-correct-p (top fndb-entry)
+  (:documentation "Check if an entry in fndb is correct")
+  (:method (top (fndb-entry simple-known-function))
+    (declare (ignore top))
+    t))
+
+(sera:-> known-function-correct-p (type-node known-function)
+         (values boolean &optional))
+(declaim (inline known-function-correct-p))
+(defun known-function-correct-p (top function)
+  (%known-function-correct-p top function))
+
+(sera:-> get-db-entry (hash-table symbol alex:non-negative-fixnum)
          (values known-function &optional))
-(defun get-db-entry (db name arguments)
+(defun get-db-entry (db name arity)
   (let ((db-entry (gethash name db)))
     (unless db-entry
       (error 'unknown-function :name name))
-    (unless (= (length arguments)
-               (known-function-arity db-entry))
+    (unless (= arity (known-function-arity db-entry))
       (error 'arity-error
              :name     name
-             :actual   (length arguments)
+             :actual   arity
              :expected (known-function-arity db-entry)))
     db-entry))
 
+(defmethod known-function-arity ((fndb-entry simple-known-function))
+  (length (simple-known-function-arg-types fndb-entry)))
+
+(defmethod known-function-arity ((fndb-entry extended-known-function))
+  (extended-known-function-arity fndb-entry))
+
+(defmethod known-function-apply-restype-fn ((fndb-entry extended-known-function)
+                                            top arg-types)
+  (let ((restype-fn (extended-known-function-restype-fn fndb-entry)))
+    (apply restype-fn top arg-types)))
+
+(defmethod known-function-apply-argtype-fn ((fndb-entry extended-known-function)
+                                            top narg res-type arg-types)
+  (let ((argtype-fn (extended-known-function-argtype-fn fndb-entry)))
+    (apply argtype-fn top narg res-type arg-types)))
+
 (sera:-> apply-restype-fn (hash-table type-node symbol &rest type-node)
          (values type-node &optional))
+(declaim (inline apply-restype-fn))
 (defun apply-restype-fn (db top name &rest arg-types)
   "Apply forward inference function for a primitive function NAME and
 argument types ARG-TYPES. DB is a function database and TOP is the top
 type of a type system."
-  (let* ((db-entry (get-db-entry db name arg-types))
-         (restype-fn (known-function-restype-fn db-entry)))
-    (apply restype-fn top arg-types)))
+  (let ((db-entry (get-db-entry db name (length arg-types))))
+    (known-function-apply-restype-fn db-entry top arg-types)))
 
-(sera:-> apply-argtype-fn (hash-table type-node symbol alex:non-negative-fixnum type-node
-                                      &rest type-node)
+(sera:-> apply-argtype-fn
+         (hash-table type-node symbol alex:non-negative-fixnum type-node &rest type-node)
          (values type-node &optional))
+(declaim (inline apply-argtype-fn))
 (defun apply-argtype-fn (db top name narg res-type &rest arg-types)
   "Apply NARG-th backward inference function for a primitive function
 NAME, result type RES-TYPE and argument types ARG-TYPES. DB is a
 function database and TOP is the top type of a type system."
-  (let* ((db-entry (get-db-entry db name arg-types))
-         (argtype-fn (known-function-argtype-fn db-entry)))
-    (apply argtype-fn top narg res-type arg-types)))
+  (let ((db-entry (get-db-entry db name (length arg-types))))
+    (known-function-apply-argtype-fn db-entry top narg res-type arg-types)))
 
+(sera:-> known-functions-equivalent-p (type-node known-function known-function)
+         (values boolean &optional))
+(defun known-functions-equivalent-p (top fn1 fn2)
+  "Return T if two functions are type-equivalent, i.e. their T_i
+functions return same values for the same tuples of arguments."
+  (let ((arity (known-function-arity fn1)))
+    (and (= (known-function-arity fn1)
+            (known-function-arity fn2))
+         (if (zerop arity)
+             (eq (known-function-apply-restype-fn fn1 top nil)
+                 (known-function-apply-restype-fn fn2 top nil))
+             (and (let ((typespace (type-space^n top arity)))
+                    (si:every
+                     (lambda (types)
+                       (eq (known-function-apply-restype-fn fn1 top types)
+                           (known-function-apply-restype-fn fn2 top types)))
+                     typespace))
+                  (si:every
+                   (lambda (arg)
+                     (let ((typespace (type-space^n top (1+ arity))))
+                       (si:every
+                        (lambda (types)
+                          (eq (known-function-apply-argtype-fn
+                               fn1 top arg (car types) (cdr types))
+                              (known-function-apply-argtype-fn
+                               fn2 top arg (car types) (cdr types))))
+                        typespace)))
+                   (si:range 0 arity)))))))
 
 (sera:-> type-space^n (type-node alexandria:non-negative-fixnum)
          (values si:iterator &optional))
@@ -145,62 +228,28 @@ for all x_i ∈ Set of types."
                  (apply fn arguments)))))
           type-space))))
 
-(sera:-> known-function-correct-p (type-node known-function)
-         (values boolean &optional))
-(defun known-function-correct-p (top function)
-  "Return T if a knwon function FUNCTION is correctly defined."
+(defmethod %known-function-correct-p (top (function extended-known-function))
   (let ((arity (known-function-arity function)))
     (if (zerop arity) t ; Nothing to check
         (and
          ;; T_0 must be monotonic on every argument
          (function-monotonic-p
           top arity
-          (alex:curry (known-function-restype-fn function) top))
+          (alex:curry (extended-known-function-restype-fn function) top))
          ;; T_i, i > 0 must be monotonic on every argument
          (si:every
           (lambda (i)
             (function-monotonic-p
              top (1+ arity)
-             (alex:curry (known-function-argtype-fn function) top i)))
+             (alex:curry (extended-known-function-argtype-fn function) top i)))
           (si:range 0 arity))
          ;; T_i, i > 0 must narrow i-th argument
          (si:every
           (lambda (i)
             (function-narrowing-p
              top (1+ arity) (1+ i)
-             (alex:curry (known-function-argtype-fn function) top i)))
+             (alex:curry (extended-known-function-argtype-fn function) top i)))
           (si:range 0 arity))))))
-
-(sera:-> fns-equivalent-p (type-node known-function known-function)
-         (values boolean &optional))
-(defun fns-equivalent-p (top fn1 fn2)
-  "Return T if two functions are type-equivalent, i.e. their T_i
-functions return same values for the same tuples of arguments."
-  (let ((arity (known-function-arity fn1)))
-    (and (= (known-function-arity fn1)
-            (known-function-arity fn2))
-         (if (zerop arity)
-             (eq (funcall (known-function-restype-fn fn1) top)
-                 (funcall (known-function-restype-fn fn2) top))
-             (and (let ((restype-fn-1 (known-function-restype-fn fn1))
-                        (restype-fn-2 (known-function-restype-fn fn2))
-                        (typespace (type-space^n top arity)))
-                    (si:every
-                     (lambda (types)
-                       (eq (apply restype-fn-1 top types)
-                           (apply restype-fn-2 top types)))
-                     typespace))
-                  (si:every
-                   (lambda (arg)
-                     (let ((argtype-fn-1 (known-function-argtype-fn fn1))
-                           (argtype-fn-2 (known-function-argtype-fn fn2))
-                           (typespace (type-space^n top (1+ arity))))
-                       (si:every
-                        (lambda (types)
-                          (eq (apply argtype-fn-1 top arg (car types) (cdr types))
-                              (apply argtype-fn-2 top arg (car types) (cdr types))))
-                        typespace)))
-                   (si:range 0 arity)))))))
 
 (sera:-> maybe-add-function-to-fndb (hash-table type-node known-function &optional boolean)
          (values known-function &optional))
@@ -234,7 +283,7 @@ type of used type system."
                     `(,type-var (find-type-node ',type-name ,%top))))
        (maybe-add-function-to-fndb
         ,db ,%top
-        (known-function
+        (extended-known-function
          ',name ,(length argument-vars)
          (lambda ,(cons top-var argument-vars)
            (declare (ignorable ,top-var))
