@@ -66,7 +66,6 @@
    #:infer-types
 
    ;; Side-effects of compilation
-   #:function-info
    #:compile-function
 
    ;; Restarts

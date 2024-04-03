@@ -75,6 +75,30 @@ system."))
   (let ((argtype-fn (extended-known-function-argtype-fn fndb-entry)))
     (apply argtype-fn top narg res-type arg-types)))
 
+(defmethod known-function-apply-restype-fn ((fndb-entry simple-known-function)
+                                            top arg-types)
+  (let ((expected-arg-types (simple-known-function-arg-types fndb-entry))
+        (res-type           (simple-known-function-res-type  fndb-entry))
+        (bottom (find-type-node nil top)))
+    (cond
+      ((some (alex:curry #'eq bottom) arg-types) bottom)
+      ((every (alex:curry #'types-intersect-p top) arg-types expected-arg-types)
+       res-type)
+      (t bottom))))
+
+(defmethod known-function-apply-argtype-fn ((fndb-entry simple-known-function)
+                                            top narg res-type arg-types)
+  (let ((expected-arg-types (simple-known-function-arg-types fndb-entry))
+        (expected-res-type  (simple-known-function-res-type  fndb-entry))
+        (bottom (find-type-node nil top)))
+    (cond
+      ((some (alex:curry #'eq bottom) arg-types) bottom)
+      ((and (every (alex:curry #'types-intersect-p top)
+                   arg-types expected-arg-types)
+            (types-intersect-p top res-type expected-res-type))
+       (meet top (nth narg arg-types) (nth narg expected-arg-types)))
+      (t bottom))))
+
 (sera:-> apply-restype-fn (hash-table type-node symbol &rest type-node)
          (values type-node &optional))
 (declaim (inline apply-restype-fn))
@@ -251,13 +275,13 @@ for all x_i ∈ Set of types."
              (alex:curry (extended-known-function-argtype-fn function) top i)))
           (si:range 0 arity))))))
 
-(sera:-> maybe-add-function-to-fndb (hash-table type-node known-function &optional boolean)
+(sera:-> maybe-add-function-to-fndb (hash-table type-node known-function)
          (values known-function &optional))
-(defun maybe-add-function-to-fndb (db top function &optional skip-checks-p)
+(defun maybe-add-function-to-fndb (db top function)
   "Add a known information about FUNCTION to a database DB. If
 FUNCTION is already in the database, signal a warning. TOP is the top
 type of used type system."
-  (unless (or skip-checks-p
+  (unless (or (typep function 'simple-known-function)
               (known-function-correct-p top function))
     (error 'incorrect-definition
            :name (known-function-name function)))
@@ -268,6 +292,18 @@ type of used type system."
             (error 'fndb-entry-exists :name name)))
       (setf (gethash name db) function)))
   function)
+
+(sera:-> make-simple-function (symbol type-node list symbol)
+         (values simple-known-function &optional))
+(defun make-simple-function (name top arg-type-names res-type-name)
+  "Make FNDB entry for a simple function with a name NAME which takes
+arguments of types with names ARG-TYPE-NAMES and return a value of
+type with a name RES-TYPE-NAME."
+  (flet ((find-type (name)
+           (find-type-node name top)))
+    (let ((arg-types (mapcar #'find-type arg-type-names))
+          (res-type  (find-type res-type-name)))
+      (simple-known-function name arg-types res-type))))
 
 (defmacro %defknown (db top name
                      (argument-vars
@@ -413,35 +449,13 @@ function database @c(fndb). This is a simplified SBCL-like version of
 @c(DEFKNOWN). Everything what is known about added functions is that
 they take arguments of types @c(arg-types) and return a value of type
 @c(res-type)."
-  (when (null arg-types)
-    (error "Number of arguments must be greater than 0"))
-  (let ((variables (loop repeat (length arg-types) collect (gensym "VAR")))
-        (tmp1      (loop repeat (length arg-types) collect (gensym "VAR")))
-        (tmp2      (gensym "RES"))
-        (bottom    (gensym "BOTTOM"))
-        (res-var   (gensym "RES"))
-        (top-var   (gensym "TOP"))
-        (arg-var   (gensym "ARG")))
-    `(defknown ,db ,top ,names (,variables (,res-var ,top-var ,arg-var))
-       ,(cons
-         `(,bottom . nil)
-         (loop for type in (cons res-type arg-types)
-               for var  in (cons tmp2 tmp1)
-               collect `(,var . ,type)))
-       (:bottom-guard ,bottom)
-       (((and ,@(loop for var  in variables
-                      for type in tmp1
-                      collect `(types-intersect-p ,top-var ,var ,type)))
-         ,tmp2))
-       (((and ,@(loop for var  in variables
-                      for type in tmp1
-                      collect `(types-intersect-p ,top-var ,var ,type))
-              (types-intersect-p ,top-var ,res-var ,tmp2))
-         (ecase ,arg-var
-           ,@(loop for i below (length arg-types)
-                   for type in tmp1
-                   for var in variables collect
-                   `(,i (meet ,top-var ,var ,type)))))))))
+  (alex:with-gensyms (db-sym top-sym)
+    `(let ((,db-sym ,db)
+           (,top-sym ,top))
+       ,@(loop for name in names collect
+               `(maybe-add-function-to-fndb
+                 ,db-sym ,top-sym
+                 (make-simple-function ',name ,top-sym ',arg-types ',res-type))))))
 
 (defmacro definitializer (db top name type)
   "Add a function with the name @c(name) which takes zero arguments
@@ -457,12 +471,7 @@ is equivalent to
   ((t type-var))
   ())
 @end(code)"
-  (alex:with-gensyms (res-var top-var n-var type-var)
-    `(defknown ,db ,top (,name) (() (,res-var ,top-var ,n-var))
-       ((,type-var . ,type))
-       (:bottom-guard nil)
-       ((t ,type-var))
-       ())))
+  `(defknown* ,db ,top (,name) () ,type))
 
 (sera:-> make-fndb (type-node)
          (values hash-table &optional))
