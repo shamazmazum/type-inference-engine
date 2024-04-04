@@ -34,18 +34,6 @@ primitive function known as FNDB-ENTRY in the database and argument
 types ARG-TYPES, result type RES-TYPE. TOP is the top type of a type
 system."))
 
-(defgeneric %known-function-correct-p (top fndb-entry)
-  (:documentation "Check if an entry in fndb is correct")
-  (:method (top (fndb-entry simple-known-function))
-    (declare (ignore top))
-    t))
-
-(sera:-> known-function-correct-p (type-node known-function)
-         (values boolean &optional))
-(declaim (inline known-function-correct-p))
-(defun known-function-correct-p (top function)
-  (%known-function-correct-p top function))
-
 (sera:-> get-db-entry (hash-table symbol alex:non-negative-fixnum)
          (values known-function &optional))
 (defun get-db-entry (db name arity)
@@ -252,7 +240,9 @@ for all x_i ∈ Set of types."
                  (apply fn arguments)))))
           type-space))))
 
-(defmethod %known-function-correct-p (top (function extended-known-function))
+(sera:-> extended-known-function-correct-p (type-node extended-known-function)
+         (values boolean &optional))
+(defun extended-known-function-correct-p (top function)
   (let ((arity (known-function-arity function)))
     (if (zerop arity) t ; Nothing to check
         (and
@@ -282,7 +272,7 @@ for all x_i ∈ Set of types."
 FUNCTION is already in the database, signal a warning. TOP is the top
 type of used type system."
   (unless (or (typep function 'simple-known-function)
-              (known-function-correct-p top function))
+              (extended-known-function-correct-p top function))
     (error 'incorrect-definition
            :name (known-function-name function)))
   (with-simple-restart (fndb-abort "Abort insertion to fndb")
