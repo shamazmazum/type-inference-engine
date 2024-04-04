@@ -16,6 +16,7 @@
    #:fndb-entry-exists
    #:malformed-defun
    #:typecheck-error
+   #:cannot-redefine
 
    ;; Graphs
    #:fold-graph

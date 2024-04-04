@@ -505,3 +505,15 @@ is equivalent to
       ((t (meet top res x))))
 
     fndb))
+
+(sera:-> find-initializer (hash-table type-node type-node)
+         (values symbol &optional))
+(defun find-initializer (fndb top type)
+  "Find a name of type initializer for the type TYPE"
+  (let ((initializer
+         (find-if
+          (lambda (entry)
+            (and (zerop (known-function-arity entry))
+                 (eq (known-function-apply-restype-fn entry top nil) type)))
+          (alex:hash-table-values fndb))))
+    (if initializer (known-function-name initializer))))

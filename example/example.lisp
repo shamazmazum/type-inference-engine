@@ -148,6 +148,7 @@
     (tie:meet top x boolean))))
 
 (tie:defknown* *fndb* *type-system* (=) (number number) boolean)
+(tie:defknown* *fndb* *type-system* (zerop) (number) boolean)
 
 ;; bool :: BOOLEAN -> a -> b -> (or a b)
 (tie:defknown *fndb* *type-system* (bool) ((c then else) (res top n))

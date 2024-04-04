@@ -130,7 +130,12 @@ transfers control to a node labeled with @c(sf-label)."
          (ir-node label (list next-label) group))
        groups lbls (cdr lbls)))))
 
-(defun add-sf-node (nodes variables sf-label)
+;; FIXME: Assoc with default anywhere?
+(defun assoc-default (item alist default)
+  (let ((value (assoc item alist)))
+    (if value (cdr value) default)))
+
+(defun add-sf-node (nodes variables sf-label initializers)
   "Add start/finish node on top of the nodes. The start/finish node has a label
 @c(sf-label) and initializes variables @c(variables)."
   (let ((first-label (ir-node-label (car nodes))))
@@ -138,7 +143,9 @@ transfers control to a node labeled with @c(sf-label)."
      (ir-node sf-label (list first-label)
               (mapcar
                (lambda (variable)
-                 (statement variable 'initialize nil))
+                 (statement variable
+                            (assoc-default variable initializers 'initialize)
+                            nil))
                variables))
      nodes)))
 
@@ -155,9 +162,28 @@ transfers control to a node labeled with @c(sf-label)."
                  (append (remove-duplicates (collect-free-variables no-literals)
                                             :test #'eq)
                          (mapcar #'cdr variable-mappings))
-                 sf-label)))
+                 sf-label nil)))
 
-(defun parse-defun (form &optional literal-initializers)
+(sera:-> initializers (hash-table type-node symbol list)
+         (values list &optional))
+(defun initializers (fndb top name parameters)
+  (let ((entry (gethash name fndb)))
+    (when (typep entry 'simple-known-function)
+      (let ((actual-arity (length parameters))
+            (expected-arity (known-function-arity entry)))
+        (unless (= actual-arity expected-arity)
+          (error 'arity-error
+                 :name     (known-function-name entry)
+                 :actual   actual-arity
+                 :expected expected-arity)))
+      (remove
+       nil (mapcar
+            (lambda (parameter type)
+              (let ((initializer (find-initializer fndb top type)))
+                (if initializer (cons parameter initializer))))
+            parameters (simple-known-function-arg-types entry))))))
+
+(defun parse-defun (db top form &optional literal-initializers)
   "Parse definition of a new function to intermediate representation"
   (unless (= (length form) 4)
     (error 'malformed-defun :code form))
@@ -165,7 +191,8 @@ transfers control to a node labeled with @c(sf-label)."
       form
     (unless (eq defun-symb 'defun)
       (error 'malformed-defun :code form))
-    (let* ((no-literals (handle-literals (if (atom expr) (list 'identity expr) expr)
+    (let* ((initializers (initializers db top name parameters))
+           (no-literals (handle-literals (if (atom expr) (list 'identity expr) expr)
                                          literal-initializers))
            (expr-groups (group-by-depth (assign-depth no-literals parameters)))
            (variable-mappings (allocate-variables expr-groups))
@@ -175,7 +202,8 @@ transfers control to a node labeled with @c(sf-label)."
            (last-statement-group (ir-node-statements (car (last ir-nodes)))))
       (assert (= (length last-statement-group) 1))
       (values
-       (add-sf-node ir-nodes (append parameters (mapcar #'cdr variable-mappings)) sf-label)
+       (add-sf-node ir-nodes (append parameters (mapcar #'cdr variable-mappings))
+                    sf-label initializers)
        name parameters
        (statement-assigns-to (first last-statement-group))))))
 

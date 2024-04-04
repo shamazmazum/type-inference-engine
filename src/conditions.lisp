@@ -124,3 +124,12 @@ number of arguments."))
              (function-name c))))
   (:documentation "Signaled when you want to place an entry in fndb
 which tries to overwrite another existing entry."))
+
+(define-condition cannot-redefine (inference-error functional-condition)
+  ()
+  (:report
+   (lambda (c s)
+     (format s "Cannot redefine a primitive function ~a"
+             (function-name c))))
+  (:documentation "Signaled when an attempt to redefine a primitive
+function is made."))
