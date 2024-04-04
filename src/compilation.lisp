@@ -11,31 +11,40 @@
 (defun compile-function (form fndb top-type &optional literal-initializers)
   (multiple-value-bind (nodes name parameters result-variable)
       (parse-defun fndb top-type form literal-initializers)
-    (let* ((types (s/f-node-mappings
-                   (infer-types fndb top-type (ir-nodes->flat-nodes nodes))))
-           (argtypes (mapcar (alex:curry #'alex:assoc-value types) parameters))
-           (restype (alex:assoc-value types result-variable)))
+    (let* ((mappings (s/f-node-mappings
+                      (infer-types fndb top-type (ir-nodes->flat-nodes nodes))))
+           (actual-argtypes (mapcar (alex:curry #'alex:assoc-value mappings) parameters))
+           (actual-restype (alex:assoc-value mappings result-variable)))
 
-      (let ((bottom (find-type-node nil top-type)))
-        (when (find bottom types :key #'cdr)
-          (error 'typecheck-error :name name :argtypes argtypes :restype restype)))
+      ;; Check that every variable contains a value
+      (loop with bottom = (find-type-node nil top-type)
+            for mapping in mappings
+            when (eq bottom (cdr mapping)) do
+            (error 'typecheck-error :name name :varname (car mapping) :actual (cdr mapping)))
 
-    (alex:when-let ((entry (gethash name fndb)))
-      (unless (typep entry 'simple-known-function)
-        (error 'cannot-redefine :name (known-function-name entry)))
       ;; FIXME: We also do not allow the types to be wider than declared.
-      (loop for declared-argtype in (simple-known-function-arg-types entry)
-            for actual-argtype   in argtypes
-            unless (le (type-node-order top-type actual-argtype declared-argtype)) do
-            (error 'typecheck-error :name name :argtypes argtypes :restype restype))
-      (unless (le (type-node-order
-                   top-type restype
-                   (simple-known-function-res-type entry)))
-        (error 'typecheck-error :name name :argtypes argtypes :restype restype)))
+      (alex:when-let ((entry (gethash name fndb)))
+        (unless (typep entry 'simple-known-function)
+          (error 'cannot-redefine :name (known-function-name entry)))
+        (loop for declared-argtype in (simple-known-function-arg-types entry)
+              for actual-argtype   in actual-argtypes
+              for parameter        in parameters
+              unless (le (type-node-order top-type actual-argtype declared-argtype)) do
+            (error 'typecheck-error
+                   :name     name
+                   :varname  parameter
+                   :actual   actual-argtype
+                   :expected declared-argtype))
+        (let ((declared-restype (simple-known-function-res-type entry)))
+          (unless (le (type-node-order top-type actual-restype declared-restype))
+            (error 'typecheck-error
+                   :name     name
+                   :varname  result-variable
+                   :actual   actual-restype
+                   :expected declared-restype))))
 
-    (handler-bind
-        ((fndb-entry-exists #'fndb-replace))
-      (maybe-add-function-to-fndb
-       fndb top-type
-       (simple-known-function
-        name argtypes restype))))))
+      ;; Update FNDB
+      (handler-bind
+          ((fndb-entry-exists #'fndb-replace))
+        (maybe-add-function-to-fndb
+         fndb top-type (simple-known-function name actual-argtypes actual-restype))))))

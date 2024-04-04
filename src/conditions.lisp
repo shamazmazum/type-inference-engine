@@ -65,18 +65,25 @@ when parsing @c(defun)."))
   (:documentation "Signaled when parsing malformed @c(defun)."))
 
 (define-condition typecheck-error (inference-error functional-condition)
-  ((argtypes :reader        typecheck-error-argtypes
-             :initarg       :argtypes
-             :documentation "Types of arguments")
-   (restype  :reader        typecheck-error-restype
-             :initarg       :restype
-             :documentation "Type of result"))
+  ((varname  :reader        typecheck-error-varname
+             :initarg       :varname
+             :documentation "Name of the variable which holds a value of invalid type")
+   (actual   :reader        typecheck-error-actual
+             :initarg       :actual
+             :documentation "Actual type of a value stored in the variable")
+   (expected :reader        typecheck-error-expected
+             :initform      nil
+             :initarg       :expected
+             :documentation "Expected type of a value stored in the variable"))
   (:report
    (lambda (c s)
-     (format s "Type check error for function ~a: ~a → ~a"
+     (format s
+             "Type check error for function ~a, variable ~a. Actual: ~a~:[~;, expected: ~a~]"
              (function-name c)
-             (typecheck-error-argtypes c)
-             (typecheck-error-restype c))))
+             (typecheck-error-varname c)
+             (typecheck-error-actual c)
+             (typecheck-error-expected c)
+             (typecheck-error-expected c))))
   (:documentation "Signaled when a definition of a function contains
 type errors"))
 
