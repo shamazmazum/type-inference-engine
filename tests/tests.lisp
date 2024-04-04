@@ -229,8 +229,8 @@
 
 (test branching-1
   (multiple-value-bind (res-mappings res-var)
-      (tie/ex:infer-types '(tie/ex:bool (numberp x) (sin x) y))
-    ;; BOOL evaluates its arguments, so X HAVE to be number
+      (tie/ex:infer-types '(if (numberp x) (sin x) y))
+    ;; IF evaluates its arguments, so X HAVE to be number
     (is (eq (var-type res-mappings res-var)
             (find-type 'number)))
     (is (eq (var-type res-mappings 'x)
@@ -240,7 +240,7 @@
 
 (test branching-2
   (multiple-value-bind (res-mappings res-var)
-      (tie/ex:infer-types '(tie/ex:bool (numberp x) (sin y) (cons x y)))
+      (tie/ex:infer-types '(if (numberp x) (sin y) (cons x y)))
     ;; Both branches are possible
     (is (eq (var-type res-mappings res-var)
             (find-type t)))

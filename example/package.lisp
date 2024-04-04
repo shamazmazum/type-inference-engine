@@ -6,7 +6,4 @@
            #:*fndb*
            #:*literal-initializers*
            #:infer-types
-           #:compile-function
-
-           ;; Extra functions whose symbols are not in CL package
-           #:bool))
+           #:compile-function))
