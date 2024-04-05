@@ -33,7 +33,7 @@ with the type of that literal or NIL otherwise."
   (let ((entry (find-if (alex:rcurry #'funcall code) table :key #'car)))
     (cdr entry)))
 
-(defun handle-literals (expr literal-initializers)
+(defun expand-literals (expr literal-initializers)
   "Return @c(expr) with literals replaced by corresponding literal
 initializer functions."
   (labels ((%go (expr)
@@ -54,6 +54,17 @@ initializer functions."
                         (mapcar #'%go (cdr expr))))))))
     (%go expr)))
 
+(defun expand-atom (expr)
+  "Expand atomic expressions to a trivial function call."
+  (if (atom expr) (list 'identity expr) expr))
+
+(defun expand-expression (expr literal-initializers)
+  "Replace literals in the expression by corresponding initializers,
+replace atomic expressions with a call to IDENTITY, etc."
+  (expand-literals
+   (expand-atom expr)
+   literal-initializers))
+
 (defun collect-free-variables (expr)
   "Return a list of free variables in an expression"
   (labels ((%go (expr)
@@ -61,7 +72,9 @@ initializer functions."
                  (reduce #'append (cdr expr)
                          :initial-value nil
                          :key #'%go))))
-    (%go expr)))
+    (remove-duplicates
+     (%go expr)
+     :test #'eq)))
 
 (defun assign-depth (expr &optional parameter-vars)
   "Convert an S-expression into a list of pairs @c((depth . funcall))
@@ -151,16 +164,14 @@ transfers control to a node labeled with @c(sf-label)."
 
 (defun parse-expr (expr &optional literal-initializers)
   "Parse an expression (nested function calls) to intermediate representation"
-  (let* ((no-literals (handle-literals (if (atom expr) (list 'identity expr) expr)
-                                       literal-initializers))
-         (expr-groups (group-by-depth (assign-depth no-literals)))
+  (let* ((expanded-expr (expand-expression expr literal-initializers))
+         (expr-groups (group-by-depth (assign-depth expanded-expr)))
          (variable-mappings (allocate-variables expr-groups))
          (statement-groups (convert-to-statements expr-groups variable-mappings))
          (sf-label (gensym "S/F"))
          (ir-nodes (ir-nodes statement-groups sf-label)))
     (add-sf-node ir-nodes
-                 (append (remove-duplicates (collect-free-variables no-literals)
-                                            :test #'eq)
+                 (append (collect-free-variables expanded-expr)
                          (mapcar #'cdr variable-mappings))
                  sf-label nil)))
 
@@ -192,9 +203,8 @@ transfers control to a node labeled with @c(sf-label)."
     (unless (eq defun-symb 'defun)
       (error 'malformed-defun :code form))
     (let* ((initializers (initializers db top name parameters))
-           (no-literals (handle-literals (if (atom expr) (list 'identity expr) expr)
-                                         literal-initializers))
-           (expr-groups (group-by-depth (assign-depth no-literals parameters)))
+           (expanded-expr (expand-expression expr literal-initializers))
+           (expr-groups (group-by-depth (assign-depth expanded-expr parameters)))
            (variable-mappings (allocate-variables expr-groups))
            (statement-groups (convert-to-statements expr-groups variable-mappings))
            (sf-label (gensym "S/F"))
