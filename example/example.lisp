@@ -101,6 +101,27 @@
     (tie:meet top integer
               (tie:meet top x y)))))
 
+(tie:defknown *fndb* *type-system* (/) ((x y) (res top n))
+  ((number  . number)
+   (integer . integer)
+   (float   . float)
+   (bottom  . nil))
+  (:bottom-guard bottom)
+  ;; T₀
+  (((and (member x (list integer float))
+         (member y (list integer float)))
+    float)
+   ((and (tie:types-intersect-p top x number)
+         (tie:types-intersect-p top y number))
+    number))
+  ;; T₁ / T₂
+  ;; Can be improved, I think
+  (((and (tie:types-intersect-p top x number)
+         (tie:types-intersect-p top y number)
+         (tie:types-intersect-p top res number)
+    (tie:meet top number
+              (ecase n (0 x) (1 y)))))))
+
 ;; Floor / ceiling
 ;; floor   :: Num a => a -> INTEGER
 ;; ceiling :: Num a => a -> INTEGER
