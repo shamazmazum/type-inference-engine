@@ -9,6 +9,26 @@
 (sera:-> compile-function (list hash-table type-node &optional list)
          (values simple-known-function &optional))
 (defun compile-function (form fndb top-type &optional literal-initializers)
+  "Infer types for a function defined by the defun form (just like in
+Common Lisp) and add this function to the database if it
+typechecks.
+
+Example (@c(tie/ex) is a local nickname for the package
+@c(type-inference-engine/example)):
+@begin[lang=lisp](code)
+TIE-EXAMPLE> (tie:compile-function
+ '(defun foo (x y)
+   (let ((z (elt x (1+ y))))
+     (* z (+ y z))))
+  tie/ex:*fndb* tie/ex:*type-system*)
+#S(TIE::SIMPLE-KNOWN-FUNCTION
+   :NAME FOO
+   :ARG-TYPES (#<TIE:TYPE-NODE SEQUENCE {102E78D253}>
+               #<TIE:TYPE-NODE INTEGER {102E78D2B3}>)
+   :RES-TYPE #<TIE:TYPE-NODE NUMBER {102E78D313}>)
+@end(code)
+
+See also: @c(parse-expr)."
   (multiple-value-bind (nodes name parameters)
       (parse-defun fndb top-type form literal-initializers)
     (let* ((mappings (s/f-node-mappings

@@ -5,5 +5,6 @@
   (:export #:*type-system*
            #:*fndb*
            #:*literal-initializers*
+           #:->
            #:infer-types
            #:compile-function))

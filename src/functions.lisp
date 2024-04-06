@@ -352,24 +352,24 @@ type with a name RES-TYPE-NAME."
   "Add new known functions to the database @c(db). @c(Top) is the top
 type of a type system. @c(Names) is a list of function names to be
 added. The new functions all have the same arity and the same
-functions T₀, T₁, etc.
+functions \\(T_0\\), \\(T_1\\), etc.
 
-@c(Type-bindings-clause) is a form @c((arglist (result-variable
+@c(Arguments-clause) is a form @c((arglist (result-variable
 top-variable narg-variable))) and contains some important variables
-which can be used in the body of functions T_i. @c(Arglist) is a list
-of variables which are bound to types of arguments of the defined
+which can be used in the body of functions \\(T_i\\). @c(Arglist) is a
+list of variables which are bound to types of arguments of the defined
 functions. @c(Top-variable) is bound to the top type of a type-system,
-@c(res-variable) is bound to type of the result of the defined
-function and @c(narg-variable) is bound to i-1 in the body of T_i when
-i > 0.
+@c(result-variable) is bound to type of the result of the defined
+function and @c(narg-variable) is bound to \\(i-1\\) in the body of
+\\(T_i\\) when \\(i > 0\\).
 
 @c(Type-bindings-clause) is an associative list with entries in the
 form @c((variable-name . type-name)) which contains additional
-bindings of variables to types inside T_i functions.
+bindings of variables to types inside \\(T_i\\) functions.
 
 @c(Bottom-guard) argument must always be present and be either @c(nil)
 or name of a variable bound to the bottom type. If @c(bottom-guard) is
-not null then bottom guards will be present in T_i functions.
+not null then bottom guards will be present in \\(T_i\\) functions.
 
 @c(T0-cond-clauses) define a body of function T₀ in which bindings to
 @c(top-variable) and variables in @c(arglist) are in effect. This body

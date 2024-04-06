@@ -312,19 +312,20 @@ a predicate returns @c(T) then that term is considered as a literal
 and the corresponding initializer function is used to initialize a
 constant variable with a value of type of the literal. For example:
 @begin[lang=lisp](code)
-(parse-code '(+ x 3)) ; => Signals UNKNOWN-LITERAL
-(parse-code
- '(+ x 3)
- (list
-  (cons #'intergerp 'init/integer)))
-;; =>
-;; #<Node (#<STATEMENT VAR254 ← (+ X CONST253) {1010A14543}>) {1010A14563}>
-;; #:VAR254
+CL-USER> (parse-code '(+ x 3)) ; => Signals UNKNOWN-LITERAL
+CL-USER> (type-inference-engine:parse-expr
+          '(+ x 3)
+          (list
+           (cons #'integerp 'init/integer)))
+((TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (2) (1) (#<TYPE-INFERENCE-ENGINE:STATEMENT X ← (INITIALIZE )>
+                                                   #<TYPE-INFERENCE-ENGINE:STATEMENT RES567 ← (INITIALIZE )>
+                                                   #<TYPE-INFERENCE-ENGINE:STATEMENT VAR568 ← (INITIALIZE )>))
+ (TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (0) (2) (#<TYPE-INFERENCE-ENGINE:STATEMENT VAR568 ← (INIT/INTEGER )>))
+ (TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (1) (0) (#<TYPE-INFERENCE-ENGINE:STATEMENT RES567 ← (+ X
+                                                                                                 #:VAR568)>)))
 @end(code)
 
-This function returns a control flow graph and the name of a variable
-where the result of expression is stored after evaluation of a
-statement."
+This function returns a control flow graph which can be passed to @c(infer-types)."
   (let ((ir-nodes (parse-expr-to-ir code literal-initializers)))
     (ir-nodes->flat-nodes ir-nodes)))
 
@@ -346,6 +347,8 @@ statement."
 (sera:-> result-variable (list)
          (values symbol &optional))
 (defun result-variable (flat-nodes)
+  "Get the variable in which the result of execution of a program is
+stored."
   (let ((last-statement-group (flat-control-node-statements
                                (car (last flat-nodes)))))
     (assert (= (length last-statement-group) 1))

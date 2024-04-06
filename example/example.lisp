@@ -233,3 +233,6 @@ database."
 
 (defun compile-function (form)
   (tie:compile-function form *fndb* *type-system* *literal-initializers*))
+
+(defmacro -> (names argtypes restype)
+  `(tie:defknown* *fndb* *type-system* ,names ,argtypes ,restype))

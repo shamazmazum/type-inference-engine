@@ -15,91 +15,107 @@
                     (#:tie/ex #:type-inference-engine/example)))
 (in-package :examples)
 
-(tie/ex:infer-types '(+ x (sin y)))
-;; =>
-;; #((Y . #<TIE:TYPE-NODE NUMBER {10286E6453}>)
-;;   (#:VAR4955 . #<TIE:TYPE-NODE NUMBER {10286E6453}>)
-;;   (X . #<TIE:TYPE-NODE NUMBER {10286E6453}>)
-;;   (#:VAR4954 . #<TIE:TYPE-NODE NUMBER {10286E6453}>))
-;; #:VAR4955
-;;
-;; The first value is a mapping from variables used in an expression
-;; '(+ x (sin y)) (later: the expression) to their corresponding
-;; types. Variables which begin with #:VAR are intermediate variables
-;; which do not appear in the expression explicitly. The second value
-;; is a name of variable which contains the result of evaluation of
-;; the expression. All in all, the output of TIE/EX:INFER-TYPES can be
-;; read as: the expression takes two arguments of type NUMBER and
-;; returns a result of type NUMBER.
+(tie/ex:infer-types '(+ x (sin y))) ;; =>
+((Y . #<TIE:TYPE-NODE NUMBER {10155D1173}>)
+ (#:RES486 . #<TIE:TYPE-NODE NUMBER {10155D1173}>)
+ (X . #<TIE:TYPE-NODE NUMBER {10155D1173}>)
+ (#:VAR487 . #<TIE:TYPE-NODE NUMBER {10155D1173}>))
+#:RES486
+;; The first value is a mapping from variables used in the expression to their
+;; corresponding types. Variables which begin with #:VAR are intermediate
+;; variables which do not appear in the expression explicitly. The second value
+;; is a name of variable which contains the result of evaluation of the
+;; expression. All in all, the output of TIE/EX:INFER-TYPES can be read as: the
+;; expression takes two arguments of type NUMBER and returns a result of type
+;; NUMBER.
 
-(tie/ex:infer-types '(1+ (sin (floor y))))
-;; =>
-;; #((Y . #<TIE:TYPE-NODE NUMBER {10286E6453}>)
-;;   (#:VAR4956 . #<TIE:TYPE-NODE INTEGER {10286E6413}>)
-;;   (#:VAR4958 . #<TIE:TYPE-NODE FLOAT {10286E6433}>)
-;;   (#:VAR4957 . #<TIE:TYPE-NODE FLOAT {10286E6433}>))
-;; #:VAR4958
-;;
+(tie/ex:infer-types '(1+ (sin (floor y)))) ;; =>
+((Y . #<TIE:TYPE-NODE NUMBER {10155D1173}>)
+ (#:VAR501 . #<TIE:TYPE-NODE INTEGER {10155D1113}>)
+ (#:RES499 . #<TIE:TYPE-NODE FLOAT {10155D1143}>)
+ (#:VAR500 . #<TIE:TYPE-NODE FLOAT {10155D1143}>))
+#:RES499
 ;; Here Y becomes rounded with FLOOR before SIN is calculated. As a
 ;; result the most narrow type of (SIN (FLOOR Y)) is FLOAT (which is a
 ;; type for real numbers in floating point representation), not NUMBER
 ;; (which is a type for numbers in general). Hence the whole
 ;; expression takes an argument of type NUMBER and returns a FLOAT.
 
-(tie/ex:infer-types '(+ (length y) (- x (floor (elt y x)))))
-;; =>
-;; #((#:VAR4963 . #<TIE:TYPE-NODE NUMBER {10286E6453}>)
-;;   (X . #<TIE:TYPE-NODE INTEGER {10286E6413}>)
-;;   (#:VAR4964 . #<TIE:TYPE-NODE INTEGER {10286E6413}>)
-;;   (Y . #<TIE:TYPE-NODE SEQUENCE {1037ADC713}>)
-;;   (#:VAR4966 . #<TIE:TYPE-NODE INTEGER {10286E6413}>)
-;;   (#:VAR4962 . #<TIE:TYPE-NODE INTEGER {10286E6413}>)
-;;   (#:VAR4965 . #<TIE:TYPE-NODE INTEGER {10286E6413}>))
-;; #:VAR4966
-;;
+(tie/ex:infer-types '(+ (length y) (- x (floor (elt y x))))) ;; =>
+((#:VAR517 . #<TIE:TYPE-NODE NUMBER {10155D1173}>)
+ (Y . #<TIE:TYPE-NODE SEQUENCE {10155D10B3}>)
+ (X . #<TIE:TYPE-NODE INTEGER {10155D1113}>)
+ (#:VAR516 . #<TIE:TYPE-NODE INTEGER {10155D1113}>)
+ (#:RES513 . #<TIE:TYPE-NODE INTEGER {10155D1113}>)
+ (#:VAR514 . #<TIE:TYPE-NODE INTEGER {10155D1113}>)
+ (#:VAR515 . #<TIE:TYPE-NODE INTEGER {10155D1113}>))
+#:RES513
 ;; Here the most narrow type for Y is a SEQUENCE (one dimensional array-like
-;; collection). X can only be an INTEGER as it serves a role of an index into
-;; Y in (ELT Y X). The result has a type INTEGER, because both LENGTH and FLOOR
+;; collection). X can only be an INTEGER as it serves a role of an index into Y
+;; in (ELT Y X). The result has a type INTEGER, because both LENGTH and FLOOR
 ;; return an INTEGER.
 
-(tie/ex:infer-types '(+ x (length x)))
-;; =>
-;; #((#:VAR4968 . #<TIE:TYPE-NODE NIL {10286E6313}>)
-;;   (X . #<TIE:TYPE-NODE NIL {10286E6313}>)
-;;   (#:VAR4967 . #<TIE:TYPE-NODE NIL {10286E6313}>))
-;; #:VAR4968
-;;
-;; The expression (+ x (length x)) maps values of type NIL to NIL,
-;; i.e. there are no such values for which the expression can be
-;; evaluated. NIL is a special type so that ∄x: x ∈ NIL. This is
-;; because X cannot be a number and a sequence at the same time.
+(tie/ex:infer-types '(+ x (length x))) ;; =>
+((#:RES530 . #<TIE:TYPE-NODE NIL {10155D0F93}>)
+ (X . #<TIE:TYPE-NODE NIL {10155D0F93}>)
+ (#:VAR531 . #<TIE:TYPE-NODE NIL {10155D0F93}>))
+#:RES530
+;; The expression (+ x (length x)) maps values of type NIL to NIL which is a
+;; special empty type, i.e. there are no such values for which the expression
+;; can be evaluated. This is because X cannot be a number and a sequence at the
+;; same time.
 
-(tie/ex:infer-types '(tie/ex:bool x (1+ (floor y)) (sin z)))
-;; =>
-;; #((Z . #<TIE:TYPE-NODE NUMBER {10286E6453}>)
-;;   (Y . #<TIE:TYPE-NODE NUMBER {10286E6453}>)
-;;   (#:VAR4969 . #<TIE:TYPE-NODE INTEGER {10286E6413}>)
-;;   (#:VAR4972 . #<TIE:TYPE-NODE NUMBER {10286E6453}>)
-;;   (X . #<TIE:TYPE-NODE BOOLEAN {1037EFF223}>)
-;;   (#:VAR4970 . #<TIE:TYPE-NODE INTEGER {10286E6413}>)
-;;   (#:VAR4971 . #<TIE:TYPE-NODE NUMBER {10286E6453}>))
-;; #:VAR4972
-;;
-;; This expression take a BOOLEAN x and returns a value of type
-;; NUMBER. BOOL function is like IF in Common Lisp with exception that
-;; BOOL evaluates all its arguments.
+(tie/ex:infer-types '(if x (1+ (floor y)) (sin z))) ;; =>
+((Y . #<TIE:TYPE-NODE NUMBER {10155D1173}>)
+ (#:VAR549 . #<TIE:TYPE-NODE INTEGER {10155D1113}>)
+ (Z . #<TIE:TYPE-NODE NUMBER {10155D1173}>)
+ (#:RES546 . #<TIE:TYPE-NODE NUMBER {10155D1173}>)
+ (X . #<TIE:TYPE-NODE BOOLEAN {10155D11A3}>)
+ (#:VAR547 . #<TIE:TYPE-NODE INTEGER {10155D1113}>)
+ (#:VAR548 . #<TIE:TYPE-NODE NUMBER {10155D1173}>))
+#:RES546
+;; This expression take a BOOLEAN x and returns a value of type NUMBER. IF is an
+;; ordinary function in this example, i.e. it evaluates all its arguments and
+;; returns either the second or the third argument depending on conditional.
 
-(tie/ex:infer-types '(tie/ex:bool (numberp (1+ x)) 3.2 4))
-;; =>
-;; #((X . #<TIE:TYPE-NODE NUMBER {10286E6453}>)
-;;   (#:VAR4973 . #<TIE:TYPE-NODE NUMBER {10286E6453}>)
-;;   (#:VAR4977 . #<TIE:TYPE-NODE FLOAT {10286E6433}>)
-;;   (#:VAR4974 . #<TIE:TYPE-NODE TRUE {1037F5D7B3}>)
-;;   (#:CONST4975 . #<TIE:TYPE-NODE FLOAT {10286E6433}>)
-;;   (#:CONST4976 . #<TIE:TYPE-NODE INTEGER {10286E6413}>))
-;; #:VAR4977
-;;
-;; (1+ X) have to be a number, so the result is of type FLOAT.
+(tie/ex:infer-types '(if (numberp (1+ x)) 3.2 4)) ;; =>
+((X . #<TIE:TYPE-NODE NUMBER {10155D1173}>)
+ (#:VAR565 . #<TIE:TYPE-NODE NUMBER {10155D1173}>)
+ (#:RES561 . #<TIE:TYPE-NODE FLOAT {10155D1143}>)
+ (#:VAR562 . #<TIE:TYPE-NODE TRUE {10155D1023}>)
+ (#:VAR563 . #<TIE:TYPE-NODE FLOAT {10155D1143}>)
+ (#:VAR564 . #<TIE:TYPE-NODE INTEGER {10155D1113}>))
+#:RES561
+;; Here is an example of control flow analysis: (1+ X) is certainly a number, so
+;; the result is of type FLOAT (the value 4 is never returned).
+
+(tie/ex:-> (%fac) (integer integer) integer)
+(tie/ex:compile-function
+ '(defun %fac (acc n)
+   (if (zerop n) acc
+       (%fac (* n acc) (1- n))))) ;; =>
+#S(TIE::SIMPLE-KNOWN-FUNCTION
+   :NAME %FAC
+   :ARG-TYPES (#<TIE:TYPE-NODE INTEGER {10155D1113}>
+               #<TIE:TYPE-NODE INTEGER {10155D1113}>)
+   :RES-TYPE #<TIE:TYPE-NODE INTEGER {10155D1113}>)
+(tie/ex:compile-function
+ '(defun fac (n) (%fac 1 n))) ;; =>
+#S(TIE::SIMPLE-KNOWN-FUNCTION
+   :NAME FAC
+   :ARG-TYPES (#<TIE:TYPE-NODE INTEGER {10155D1113}>)
+   :RES-TYPE #<TIE:TYPE-NODE INTEGER {10155D1113}>)
+(tie/ex:compile-function
+ '(defun c (n m)
+   (/ (fac n) (* (fac m) (fac (- n m)))))) ;; =>
+#S(TIE::SIMPLE-KNOWN-FUNCTION
+   :NAME C
+   :ARG-TYPES (#<TIE:TYPE-NODE INTEGER {10155D1113}>
+               #<TIE:TYPE-NODE INTEGER {10155D1113}>)
+   :RES-TYPE #<TIE:TYPE-NODE FLOAT {10155D1143}>)
+;; Here custom functions FAC (factorial) and C (binomial coefficient) are
+;; created. If you are defining a recursive function, it has to be declared
+;; first (i.e. type-inference-engine works only as a type checker here).
    @end(code)
    For more understanding what is going on here, visit @ref[id=lang](language of
    expressions) and @ref[id=type-system](type system) sections.
@@ -115,20 +131,21 @@
    @title(Language of expressions)
    The inference engine infers types for expressions in the following language:
    @begin(code)
-   expression = literal | variable | funcall
+   expression = literal | variable | funcall | let
    funcall    = "(" + function + expression* + ")"
    variable   = symbol
    function   = symbol
+   let        = (let (binding+) expression)
+   binding    = (variable expression)
    @end(code)
    Here @c(|) means non-ambiguous choice operator, i.e. if an expression is a
    literal, it cannot be a variable of a function call. To determine what is a
    literal and what is not, a sequence of tests is performed on each term before
    it is classified as either a variable or a function call. For more
-   information look at @c(parse-code) function in the @ref[id=api](API)
+   information look at @c(parse-expr) function in the @ref[id=api](API)
    section. For example, both @c((+ (sin x) (- y z))) and @c((foo x y (- x y)))
    are expressions, but @c(((x y) (y x))), @c(((foo x))) and @c((foo x) y) are
-   not (the latter is actualy two correct expressions). @b(NB): There are no
-   special forms as @c(let) or @c(if) in the language yet.
+   not (the latter is actualy two correct expressions).
 
    An example provided with this engine in the system
    @c(type-inference-engine/example) has the following defined literals:
@@ -152,8 +169,8 @@
    (as in Common Lisp).)
    @item(@c(length): Take a sequence (read the next section if you do not know
    what it is) and return its length as an integer (as in Common Lisp).)
-   @item(@c(+), @c(-): Add or subtract two numeric arguments and return a
-   number (as in Common Lisp, but these functions are two-args).)
+   @item(@c(+), @c(-), @c(*), @c(/): Arithmetic functions as in Common Lisp, but
+   these functions are two-args.)
    @item(@c(floor), @c(ceiling): Take a numeric argument and round it (return an
    integer).)
    @item(@c(elt): Take a sequence and an index (integer) and return an element
@@ -161,7 +178,9 @@
    @item(@c(cons): Constructor for cons cells.)
    @item(@c(numberp): Take a value and return either @c(T) (if the value is a
    number) or @c(NIL) (otherwise).)
-   @item(@c(bool): Take a boolean and any two values @c(x) and @c(y). Return the
+   @item(@c(zerop): Take a number and return either @c(T) or @c(NIL).)
+   @item(@c(=): Take two numbers and return either @c(T) or @c(NIL).)
+   @item(@c(if): Take a boolean and any two values @c(x) and @c(y). Return the
    @c(x) if the boolean is @c(T) and @c(y) otherwise. Note, that this is an
    ordinary function, so it evaluates both @c(x) and @c(y) before giving a
    result.)
@@ -174,15 +193,15 @@
    actually evaluate @c(x) or @c((sin x)). You do not have to bind @c(x) with
    anything. As the last important notice: there is no generalized booleans in
    the example language (but you can redefine this behaviour): the first
-   argument of @c(bool) @b(must) be either @c(T) or @c(NIL).
+   argument of @c(if) @b(must) be either @c(T) or @c(NIL).
 
    An expression is internally represented as a directed graph of parallel
    assignment statements in the following form:
-   \((x_1, x_2, \dots, x_m) \leftarrow (f_1 (y_{1_1}, y_{1_2}, \dots,
-   y_{1_{n_1}}), \dots, f_m (y_{m_1}, y_{m_2}, \dots, y_{m_{n_m}})) \)
+   \((x_1, x_2, \dots, x_m) \leftarrow (f_1 (y_{11}, y_{12}, \dots,
+   y_{1n_1}), \dots, f_m (y_{m1}, y_{m2}, \dots, y_{mn_m})) \)
    That means that a statement contains \(m\) assignments. When a statement is
    executed \(m\) functions from \(f_1\) to \(f_m\) are evaluated with values in
-   corresponding variables \(y_i\) as arguments and their results are assigned to
+   corresponding variables \(y_{ij}\) as arguments and their results are assigned to
    (all distinct) variables \(x_i\). For example an expression @c((sin (1+ y)))
    is transformed in something like following:
    @begin(code)
@@ -459,54 +478,50 @@ CL-USER> (tie-example:meet 'integer 'string)
 (defun infer-types (expression)
   "Infer types in the expression using our type system and function
 database."
-  (multiple-value-bind (graph result-variable)
-      (tie:parse-code expression nil)
-    (let ((flat-graph (tie:flat-control-flow-graph graph)))
-      (values
-       (tie:infer-types *fndb* *my-system* flat-graph)
-       flat-graph
-       result-variable))))
+  (let ((graph (tie:parse-expr expression)))
+    (values
+     (tie:infer-types *fndb* *my-system* graph)
+     graph (tie:result-variable graph))))
 (export 'infer-types)
    @end(code)
 
    Here we give it a try:
    @begin[lang=lisp](code)
 CL-USER> (tie-example:infer-types '(1+ x))
-#(#((#:VAR554 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}>)
-    (X . #<TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}>))
-  #((#:VAR554 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE T {1036B20BD3}>)
-    (X . #<TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}>)))
-((TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (1) (1) (#<TYPE-INFERENCE-ENGINE:STATEMENT VAR554 ← (INITIALIZE ) {102D5DCFC3}>
-                                                    #<TYPE-INFERENCE-ENGINE:STATEMENT X ← (INITIALIZE ) {102D5DCFE3}>))
- (TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (0) (0) (#<TYPE-INFERENCE-ENGINE:STATEMENT VAR554 ← (1+ X) {102D5DCE93}>)))
-#:VAR554
+#(#((#:RES483 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {100E6E3B73}>)
+    (X . #<TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {100E6E3B73}>))
+  #((#:RES483 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE T {100E6E3BD3}>)
+    (X . #<TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {100E6E3B73}>)))
+((TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (1) (1) (#<TYPE-INFERENCE-ENGINE:STATEMENT X ← (INITIALIZE )>
+                                                   #<TYPE-INFERENCE-ENGINE:STATEMENT RES483 ← (INITIALIZE )>))
+ (TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (0) (0) (#<TYPE-INFERENCE-ENGINE:STATEMENT RES483 ← (1+ X)>)))
+#:RES483
    @end(code)
 
    Here the first returned value is our \([V \rightarrow I]^2\) mapping which
    corresponds to two parallel assignment statements which are returned as the
    second value. The third value is a variable which will hold the result of
-   @c((1+ x)). The first element of the first returned array is of interest
+   @c((1+ x)). The first element of the first returned value is of interest
    here. It is a mapping \(V \rightarrow I\) which corresponds to the fully
    evaluated expression @c((1+ x)). As you can see it takes a value of type
    @c(REAL) and returns a @c(REAL). Here is another example:
 
    @begin[lang=lisp](code)
-CL-USER> (tie-example:infer-types '(1+ (floor x)))
-#(#((X . #<TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}>)
-    (#:VAR564 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10377E3313}>)
-    (#:VAR563 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10377E3313}>))
-  #((X . #<TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}>)
-    (#:VAR564 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE T {1036B20BD3}>)
-    (#:VAR563 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE T {1036B20BD3}>))
-  #((X . #<TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}>)
-    (#:VAR564 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE T {1036B20BD3}>)
-    (#:VAR563 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10377E3313}>)))
-((TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (2) (1) (#<TYPE-INFERENCE-ENGINE:STATEMENT X ← (INITIALIZE ) {1007DF4543}>
-                                                    #<TYPE-INFERENCE-ENGINE:STATEMENT VAR564 ← (INITIALIZE ) {1007DF4563}>
-                                                    #<TYPE-INFERENCE-ENGINE:STATEMENT VAR563 ← (INITIALIZE ) {1007DF4583}>))
- (TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (0) (2) (#<TYPE-INFERENCE-ENGINE:STATEMENT VAR563 ← (FLOOR X) {1007DF4393}>))
- (TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (1) (0) (#<TYPE-INFERENCE-ENGINE:STATEMENT VAR564 ← (1+ #:VAR563) {1007DF43F3}>)))
-#:VAR564
+#(#((X . #<TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {100E6E3B73}>)
+    (#:RES497 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {100E6E3B43}>)
+    (#:VAR498 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {100E6E3B43}>))
+  #((X . #<TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {100E6E3B73}>)
+    (#:RES497 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE T {100E6E3BD3}>)
+    (#:VAR498 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE T {100E6E3BD3}>))
+  #((X . #<TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {100E6E3B73}>)
+    (#:RES497 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE T {100E6E3BD3}>)
+    (#:VAR498 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {100E6E3B43}>)))
+((TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (2) (1) (#<TYPE-INFERENCE-ENGINE:STATEMENT X ← (INITIALIZE )>
+                                                   #<TYPE-INFERENCE-ENGINE:STATEMENT RES497 ← (INITIALIZE )>
+                                                   #<TYPE-INFERENCE-ENGINE:STATEMENT VAR498 ← (INITIALIZE )>))
+ (TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (0) (2) (#<TYPE-INFERENCE-ENGINE:STATEMENT VAR498 ← (FLOOR X)>))
+ (TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (1) (0) (#<TYPE-INFERENCE-ENGINE:STATEMENT RES497 ← (1+ #:VAR498)>)))
+#:RES497
    @end(code)
    The first element of the first returned value says that an expression @c((1+
    (floor x))) takes a @c(REAL) argument @c(x) and returns an @c(INTEGER).
@@ -528,25 +543,25 @@ CL-USER> (tie-example:infer-types '(1+ (floor x)))
   (list
    (cons #'integerp 'init/integer)))
    @end(code)
-   Then call @c(parse-code) inside @c(infer-types) like this:
+   Then call @c(parse-expr) inside @c(infer-types) like this:
    @begin[lang=lisp](code)
-   (tie:parse-code expression *literals*)
+   (tie:parse-expr expression *literals*)
    @end(code)
 
    Now @c(type-inference-engine) understands integer literals:
    @begin[lang=lisp](code)   
 CL-USER> (tie-example:infer-types '(1+ 2))
-#(#((#:VAR613 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10025CC543}>)
-    (#:CONST612 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10025CC543}>))
-  #((#:VAR613 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE T {10025CC563}>)
-    (#:CONST612 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE T {10025CC563}>))
-  #((#:VAR613 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE T {10025CC563}>)
-    (#:CONST612 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10025CC543}>)))
-((TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (2) (1) (#<TYPE-INFERENCE-ENGINE:STATEMENT VAR613 ← (INITIALIZE ) {1016F6DBE3}>
-                                                    #<TYPE-INFERENCE-ENGINE:STATEMENT CONST612 ← (INITIALIZE ) {1016F6DC03}>))
- (TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (0) (2) (#<TYPE-INFERENCE-ENGINE:STATEMENT CONST612 ← (INIT/INTEGER ) {1016F6DA33}>))
- (TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (1) (0) (#<TYPE-INFERENCE-ENGINE:STATEMENT VAR613 ← (1+ #:CONST612) {1016F6DA93}>)))
-#:VAR613
+#(#((#:RES515 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {100E6E3B43}>)
+    (#:VAR516 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {100E6E3B43}>))
+  #((#:RES515 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE T {100E6E3BD3}>)
+    (#:VAR516 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE T {100E6E3BD3}>))
+  #((#:RES515 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE T {100E6E3BD3}>)
+    (#:VAR516 . #<TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {100E6E3B43}>)))
+((TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (2) (1) (#<TYPE-INFERENCE-ENGINE:STATEMENT RES515 ← (INITIALIZE )>
+                                                   #<TYPE-INFERENCE-ENGINE:STATEMENT VAR516 ← (INITIALIZE )>))
+ (TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (0) (2) (#<TYPE-INFERENCE-ENGINE:STATEMENT VAR516 ← (INIT/INTEGER )>))
+ (TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (1) (0) (#<TYPE-INFERENCE-ENGINE:STATEMENT RES515 ← (1+ #:VAR516)>)))
+#:RES515
    @end(code)
 @end(section)
 
@@ -563,6 +578,9 @@ CL-USER> (tie-example:infer-types '(1+ 2))
          @cl:doc(condition unknown-function)
          @cl:doc(condition unknown-literal)
          @cl:doc(condition fndb-entry-exists)
+         @cl:doc(condition parser-error)
+         @cl:doc(condition typecheck-error)
+         @cl:doc(condition cannot-redefine)
       )
    @end(section)
    @begin(section)
@@ -597,8 +615,9 @@ CL-USER> (tie-example:infer-types '(1+ 2))
       @title(Code parsing)
       @b(NB): This API is subject to change.
       @cl:with-package[name="type-inference-engine"](
-         @cl:doc(function parse-code)
-         @cl:doc(function flat-control-flow-graph)
+         @cl:doc(function parse-expr)
+         @cl:doc(function compile-function)
+         @cl:doc(function result-variable)
       )
    @end(section)
    @begin(section)
