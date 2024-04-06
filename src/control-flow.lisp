@@ -58,12 +58,53 @@ initializer functions."
   "Expand atomic expressions to a trivial function call."
   (if (atom expr) (list 'identity expr) expr))
 
+;; KLUDGE: I just substitude bindings in LET as if it was
+;; SYMBOL-MACROLET rather than a variable.
+(defun expand-let (expr)
+  "Substitute variables in the body of LET form with corresponding
+bindings."
+  (unless (and (eq (first expr) 'let)
+               (= (length expr) 3))
+    (error 'parser-error :code expr))
+  (let ((bindings
+         (loop for binding in (second expr) collect
+               (if (and (= (length binding) 2)
+                        (symbolp (first binding)))
+                   (cons (first binding) (second binding))
+                   (error 'parser-error :code expr)))))
+    (labels ((%go (expr)
+               (cond
+                 ((member expr bindings :key #'car :test #'eq)
+                  (alex:assoc-value bindings expr))
+                 ((atom expr) expr)
+                 (t
+                  (cons (car expr)
+                        (mapcar #'%go (cdr expr)))))))
+      (%go (third expr)))))
+
+(defun expand-lets (expr)
+  "Expand all LET forms in EXPR"
+  (labels ((%%go (expr)
+             (cond
+               ((atom expr) expr)
+               ((eq (first expr) 'let)
+                (expand-let expr))
+               (t
+                (cons (car expr)
+                      (mapcar #'%%go (cdr expr))))))
+           (%go (expr)
+             (let ((expanded (%%go expr)))
+               (if (equalp expr expanded) expr
+                   (%go expanded)))))
+    (%go expr)))
+
 (defun expand-expression (expr literal-initializers)
   "Replace literals in the expression by corresponding initializers,
 replace atomic expressions with a call to IDENTITY, etc."
-  (expand-literals
-   (expand-atom expr)
-   literal-initializers))
+  (expand-lets
+   (expand-literals
+    (expand-atom expr)
+    literal-initializers)))
 
 (defun collect-free-variables (expr)
   "Return a list of free variables in an expression"
@@ -197,11 +238,11 @@ transfers control to a node labeled with @c(sf-label)."
 (defun parse-defun-to-ir (db top form &optional literal-initializers)
   "Parse definition of a new function to intermediate representation"
   (unless (= (length form) 4)
-    (error 'malformed-defun :code form))
+    (error 'parser-error :code form))
   (destructuring-bind (defun-symb name parameters expr)
       form
     (unless (eq defun-symb 'defun)
-      (error 'malformed-defun :code form))
+      (error 'parser-error :code form))
     (let* ((initializers (initializers db top name parameters))
            (expanded-expr (expand-expression expr literal-initializers))
            (expr-groups (group-by-depth (assign-depth expanded-expr parameters)))

@@ -14,7 +14,7 @@
    #:unknown-literal
    #:unknown-variable
    #:fndb-entry-exists
-   #:malformed-defun
+   #:parser-error
    #:typecheck-error
    #:cannot-redefine
 

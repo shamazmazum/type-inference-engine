@@ -54,15 +54,15 @@ its type cannot be determined."))
   (:documentation "Signaled when an unknown variable is encountered
 when parsing @c(defun)."))
 
-(define-condition malformed-defun (inference-error)
-  ((code :reader        malformed-defun-code
+(define-condition parser-error (inference-error)
+  ((code :reader        parser-error-code
          :initarg       :code
-         :documentation "Malformed defun form"))
+         :documentation "Parser error"))
   (:report
    (lambda (c s)
-     (format s "Malformed defun form: ~a"
-             (malformed-defun-code c))))
-  (:documentation "Signaled when parsing malformed @c(defun)."))
+     (format s "Parser error: ~a"
+             (parser-error-code c))))
+  (:documentation "Signaled when parsing malformed code."))
 
 (define-condition typecheck-error (inference-error functional-condition)
   ((varname  :reader        typecheck-error-varname
