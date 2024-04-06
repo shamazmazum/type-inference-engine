@@ -71,46 +71,42 @@
    </p><pre><code class="lisp">(defun infer-types (expression)
   &quot;Infer types in the expression using our type system and function
 database.&quot;
-  (multiple-value-bind (graph result-variable)
-      (tie:parse-code expression nil)
-    (let ((flat-graph (tie:flat-control-flow-graph graph)))
-      (values
-       (tie:infer-types *fndb* *my-system* flat-graph)
-       flat-graph
-       result-variable))))
+  (let ((graph (tie:parse-expr expression)))
+    (values
+     (tie:infer-types *fndb* *my-system* graph)
+     graph (tie:result-variable graph))))
 (export 'infer-types)
    </code></pre><p>   Here we give it a try:
    </p><pre><code class="lisp">CL-USER&gt; (tie-example:infer-types '(1+ x))
-#(#((#:VAR554 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}&gt;)
-    (X . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}&gt;))
-  #((#:VAR554 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {1036B20BD3}&gt;)
-    (X . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}&gt;)))
-((TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (1)(1)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR554 ← (INITIALIZE ) {102D5DCFC3}&gt;
-                                                    #&lt;TYPE-INFERENCE-ENGINE:STATEMENT X ← (INITIALIZE ) {102D5DCFE3}&gt;))
- (TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (0)(0)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR554 ← (1+ X) {102D5DCE93}&gt;)))
-#:VAR554
+#(#((#:RES483 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {100E6E3B73}&gt;)
+    (X . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {100E6E3B73}&gt;))
+  #((#:RES483 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {100E6E3BD3}&gt;)
+    (X . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {100E6E3B73}&gt;)))
+((TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (1)(1)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT X ← (INITIALIZE )&gt;
+                                                   #&lt;TYPE-INFERENCE-ENGINE:STATEMENT RES483 ← (INITIALIZE )&gt;))
+ (TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (0)(0)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT RES483 ← (1+ X)&gt;)))
+#:RES483
    </code></pre><p>   Here the first returned value is our \([V \rightarrow I]^2\) mapping which
    corresponds to two parallel assignment statements which are returned as the
    second value. The third value is a variable which will hold the result of
-   <code>(1+ x)</code>. The first element of the first returned array is of interest
+   <code>(1+ x)</code>. The first element of the first returned value is of interest
    here. It is a mapping \(V \rightarrow I\) which corresponds to the fully
    evaluated expression <code>(1+ x)</code>. As you can see it takes a value of type
-   <code>REAL</code> and returns a <code>REAL</code>. Here is another example:</p><p>   </p><pre><code class="lisp">CL-USER&gt; (tie-example:infer-types '(1+ (floor x)))
-#(#((X . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}&gt;)
-    (#:VAR564 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10377E3313}&gt;)
-    (#:VAR563 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10377E3313}&gt;))
-  #((X . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}&gt;)
-    (#:VAR564 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {1036B20BD3}&gt;)
-    (#:VAR563 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {1036B20BD3}&gt;))
-  #((X . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {10372F0723}&gt;)
-    (#:VAR564 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {1036B20BD3}&gt;)
-    (#:VAR563 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10377E3313}&gt;)))
-((TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (2)(1)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT X ← (INITIALIZE ) {1007DF4543}&gt;
-                                                    #&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR564 ← (INITIALIZE ) {1007DF4563}&gt;
-                                                    #&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR563 ← (INITIALIZE ) {1007DF4583}&gt;))
- (TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (0)(2)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR563 ← (FLOOR X) {1007DF4393}&gt;))
- (TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (1)(0)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR564 ← (1+ #:VAR563) {1007DF43F3}&gt;)))
-#:VAR564
+   <code>REAL</code> and returns a <code>REAL</code>. Here is another example:</p><p>   </p><pre><code class="lisp">#(#((X . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {100E6E3B73}&gt;)
+    (#:RES497 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {100E6E3B43}&gt;)
+    (#:VAR498 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {100E6E3B43}&gt;))
+  #((X . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {100E6E3B73}&gt;)
+    (#:RES497 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {100E6E3BD3}&gt;)
+    (#:VAR498 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {100E6E3BD3}&gt;))
+  #((X . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE REAL {100E6E3B73}&gt;)
+    (#:RES497 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {100E6E3BD3}&gt;)
+    (#:VAR498 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {100E6E3B43}&gt;)))
+((TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (2)(1)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT X ← (INITIALIZE )&gt;
+                                                   #&lt;TYPE-INFERENCE-ENGINE:STATEMENT RES497 ← (INITIALIZE )&gt;
+                                                   #&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR498 ← (INITIALIZE )&gt;))
+ (TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (0)(2)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR498 ← (FLOOR X)&gt;))
+ (TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (1)(0)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT RES497 ← (1+ #:VAR498)&gt;)))
+#:RES497
    </code></pre><p>
    The first element of the first returned value says that an expression <code>(1+
    (floor x))</code> takes a <code>REAL</code> argument <code>x</code> and returns an <code>INTEGER</code>.

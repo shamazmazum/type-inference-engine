@@ -67,6 +67,11 @@ code which needs to be type-checked.</div><ul class="codex-slot-list"></ul></div
 its type cannot be determined.</div><ul class="codex-slot-list"><li class="codex-slot codex-class-slot"><code class="codex-name">code</code><div class="codex-docstring">An expression which contains unknown literal</div><div class="codex-class-struct-slot-option-node"><table class="codex-class-struct-slot-option-table"><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-header-cell">Option</td><td class="codex-class-struct-slot-option-header-cell">Value</td></tr><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-label-cell">Allocation:</td><td class="codex-class-struct-slot-option-value-cell codex-class-struct-slot-option-symbol-list-cell">instance</td></tr><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-label-cell">Type:</td><td class="codex-class-struct-slot-option-value-cell codex-class-struct-slot-option-symbol-list-cell"><code class="codex-class-struct-slot-symbol-list">nil</code></td></tr><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-label-cell">Initarg:</td><td class="codex-class-struct-slot-option-value-cell codex-class-struct-slot-option-symbol-list-cell"><code class="codex-class-struct-slot-symbol-list">:code</code></td></tr><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-label-cell">Readers:</td><td class="codex-class-struct-slot-option-value-cell codex-class-struct-slot-option-symbol-list-cell"><code class="codex-class-struct-slot-symbol-list">(unknown-literal-code)</code></td></tr></table></div></li></ul></div>
          <div class="codex-doc-node codex-record codex-condition"><code class="codex-name">fndb-entry-exists</code><div class="codex-docstring">Signaled when you want to place an entry in fndb
 which tries to overwrite another existing entry.</div><ul class="codex-slot-list"></ul></div>
+         <div class="codex-doc-node codex-record codex-condition"><code class="codex-name">parser-error</code><div class="codex-docstring">Signaled when parsing malformed code.</div><ul class="codex-slot-list"><li class="codex-slot codex-class-slot"><code class="codex-name">code</code><div class="codex-docstring">Parser error</div><div class="codex-class-struct-slot-option-node"><table class="codex-class-struct-slot-option-table"><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-header-cell">Option</td><td class="codex-class-struct-slot-option-header-cell">Value</td></tr><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-label-cell">Allocation:</td><td class="codex-class-struct-slot-option-value-cell codex-class-struct-slot-option-symbol-list-cell">instance</td></tr><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-label-cell">Type:</td><td class="codex-class-struct-slot-option-value-cell codex-class-struct-slot-option-symbol-list-cell"><code class="codex-class-struct-slot-symbol-list">nil</code></td></tr><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-label-cell">Initarg:</td><td class="codex-class-struct-slot-option-value-cell codex-class-struct-slot-option-symbol-list-cell"><code class="codex-class-struct-slot-symbol-list">:code</code></td></tr><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-label-cell">Readers:</td><td class="codex-class-struct-slot-option-value-cell codex-class-struct-slot-option-symbol-list-cell"><code class="codex-class-struct-slot-symbol-list">(parser-error-code)</code></td></tr></table></div></li></ul></div>
+         <div class="codex-doc-node codex-record codex-condition"><code class="codex-name">typecheck-error</code><div class="codex-docstring">Signaled when a definition of a function contains
+type errors</div><ul class="codex-slot-list"><li class="codex-slot codex-class-slot"><code class="codex-name">varname</code><div class="codex-docstring">Name of the variable which holds a value of invalid type</div><div class="codex-class-struct-slot-option-node"><table class="codex-class-struct-slot-option-table"><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-header-cell">Option</td><td class="codex-class-struct-slot-option-header-cell">Value</td></tr><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-label-cell">Allocation:</td><td class="codex-class-struct-slot-option-value-cell codex-class-struct-slot-option-symbol-list-cell">instance</td></tr><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-label-cell">Type:</td><td class="codex-class-struct-slot-option-value-cell codex-class-struct-slot-option-symbol-list-cell"><code class="codex-class-struct-slot-symbol-list">nil</code></td></tr><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-label-cell">Initarg:</td><td class="codex-class-struct-slot-option-value-cell codex-class-struct-slot-option-symbol-list-cell"><code class="codex-class-struct-slot-symbol-list">:varname</code></td></tr><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-label-cell">Readers:</td><td class="codex-class-struct-slot-option-value-cell codex-class-struct-slot-option-symbol-list-cell"><code class="codex-class-struct-slot-symbol-list">(typecheck-error-varname)</code></td></tr></table></div></li><li class="codex-slot codex-class-slot"><code class="codex-name">actual</code><div class="codex-docstring">Actual type of a value stored in the variable</div><div class="codex-class-struct-slot-option-node"><table class="codex-class-struct-slot-option-table"><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-header-cell">Option</td><td class="codex-class-struct-slot-option-header-cell">Value</td></tr><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-label-cell">Allocation:</td><td class="codex-class-struct-slot-option-value-cell codex-class-struct-slot-option-symbol-list-cell">instance</td></tr><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-label-cell">Type:</td><td class="codex-class-struct-slot-option-value-cell codex-class-struct-slot-option-symbol-list-cell"><code class="codex-class-struct-slot-symbol-list">nil</code></td></tr><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-label-cell">Initarg:</td><td class="codex-class-struct-slot-option-value-cell codex-class-struct-slot-option-symbol-list-cell"><code class="codex-class-struct-slot-symbol-list">:actual</code></td></tr><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-label-cell">Readers:</td><td class="codex-class-struct-slot-option-value-cell codex-class-struct-slot-option-symbol-list-cell"><code class="codex-class-struct-slot-symbol-list">(typecheck-error-actual)</code></td></tr></table></div></li><li class="codex-slot codex-class-slot"><code class="codex-name">expected</code><div class="codex-docstring">Expected type of a value stored in the variable</div><div class="codex-class-struct-slot-option-node"><table class="codex-class-struct-slot-option-table"><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-header-cell">Option</td><td class="codex-class-struct-slot-option-header-cell">Value</td></tr><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-label-cell">Allocation:</td><td class="codex-class-struct-slot-option-value-cell codex-class-struct-slot-option-symbol-list-cell">instance</td></tr><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-label-cell">Type:</td><td class="codex-class-struct-slot-option-value-cell codex-class-struct-slot-option-symbol-list-cell"><code class="codex-class-struct-slot-symbol-list">nil</code></td></tr><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-label-cell">Initarg:</td><td class="codex-class-struct-slot-option-value-cell codex-class-struct-slot-option-symbol-list-cell"><code class="codex-class-struct-slot-symbol-list">:expected</code></td></tr><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-label-cell">Initform:</td><td class="codex-class-struct-slot-option-value-cell codex-class-struct-slot-option-symbol-list-cell"><code class="codex-class-struct-slot-symbol-list">nil</code></td></tr><tr class="codex-class-struct-slot-option-row"><td class="codex-class-struct-slot-option-label-cell">Readers:</td><td class="codex-class-struct-slot-option-value-cell codex-class-struct-slot-option-symbol-list-cell"><code class="codex-class-struct-slot-symbol-list">(typecheck-error-expected)</code></td></tr></table></div></li></ul></div>
+         <div class="codex-doc-node codex-record codex-condition"><code class="codex-name">cannot-redefine</code><div class="codex-docstring">Signaled when an attempt to redefine a primitive
+function is made.</div><ul class="codex-slot-list"></ul></div>
       
    
    <h1 id="0-type-system">Type system</h1>
@@ -108,18 +113,18 @@ Graphviz format to the output stream <code>stream</code>.</div></div>
          <div class="codex-doc-node codex-operator codex-macro"><code class="codex-name">defknown</code><code class="codex-lambda-list">(db top names arguments-clause type-bindings-clause (&amp;key (bottom-guard nil bottom-guard-p)) t0-cond-clauses &amp;optional t1+-cond-clauses)</code><div class="codex-docstring"><p>Add new known functions to the database <code>db</code>. <code>Top</code> is the top
 type of a type system. <code>Names</code> is a list of function names to be
 added. The new functions all have the same arity and the same
-functions T₀, T₁, etc.<code>Type-bindings-clause</code> is a form <code>(arglist (result-variable
+functions \(T_0\), \(T_1\), etc.<code>Arguments-clause</code> is a form <code>(arglist (result-variable
 top-variable narg-variable))</code> and contains some important variables
-which can be used in the body of functions T_i. <code>Arglist</code> is a list
-of variables which are bound to types of arguments of the defined
+which can be used in the body of functions \(T_i\). <code>Arglist</code> is a
+list of variables which are bound to types of arguments of the defined
 functions. <code>Top-variable</code> is bound to the top type of a type-system,
-<code>res-variable</code> is bound to type of the result of the defined
-function and <code>narg-variable</code> is bound to i-1 in the body of T_i when
-i &gt; 0.<code>Type-bindings-clause</code> is an associative list with entries in the
+<code>result-variable</code> is bound to type of the result of the defined
+function and <code>narg-variable</code> is bound to \(i-1\) in the body of
+\(T_i\) when \(i &gt; 0\).<code>Type-bindings-clause</code> is an associative list with entries in the
 form <code>(variable-name . type-name)</code> which contains additional
-bindings of variables to types inside T_i functions.<code>Bottom-guard</code> argument must always be present and be either <code>nil</code>
+bindings of variables to types inside \(T_i\) functions.<code>Bottom-guard</code> argument must always be present and be either <code>nil</code>
 or name of a variable bound to the bottom type. If <code>bottom-guard</code> is
-not null then bottom guards will be present in T_i functions.<code>T0-cond-clauses</code> define a body of function T₀ in which bindings to
+not null then bottom guards will be present in \(T_i\) functions.<code>T0-cond-clauses</code> define a body of function T₀ in which bindings to
 <code>top-variable</code> and variables in <code>arglist</code> are in effect. This body
 is an explicit cond, so <code>t0-cond-clauses</code> may be like this
 </p><pre><code class="lisp">((condition-1 form-1)
@@ -195,7 +200,7 @@ is equivalent to
    <h1 id="code-parsing">Code parsing</h1>
       <b>NB</b>: This API is subject to change.
       
-         <div class="codex-doc-node codex-operator codex-function"><code class="codex-name">parse-code</code><code class="codex-lambda-list">(code &amp;optional literal-initializers)</code><div class="codex-docstring"><p>Parse an expression <code>code</code> and construct a control flow
+         <div class="codex-doc-node codex-operator codex-function"><code class="codex-name">parse-expr</code><code class="codex-lambda-list">(code &amp;optional literal-initializers)</code><div class="codex-docstring"><p>Parse an expression <code>code</code> and construct a control flow
 graph. <code>Literal-initializers</code> is an associative list which contains
 predicates as keys and initializer functions as values. When
 <code>parse-code</code> sees a term of the expression, it runs predicates in
@@ -203,34 +208,48 @@ predicates as keys and initializer functions as values. When
 a predicate returns <code>T</code> then that term is considered as a literal
 and the corresponding initializer function is used to initialize a
 constant variable with a value of type of the literal. For example:
-</p><pre><code class="lisp">(parse-code '(+ x 3)) ; =&gt; Signals UNKNOWN-LITERAL
-(parse-code
- '(+ x 3)
- (list
-  (cons #'intergerp 'init/integer)))
-;; =&gt;
-;; #&lt;Node (#&lt;STATEMENT VAR254 ← (+ X CONST253) {1010A14543}&gt;) {1010A14563}&gt;
-;; #:VAR254
-</code></pre><p>This function returns a control flow graph and the name of a variable
-where the result of expression is stored after evaluation of a
-statement.</p></div></div>
-         <div class="codex-error codex-no-node">No node with name <code>flat-control-flow-graph</code>.</div>
+</p><pre><code class="lisp">CL-USER&gt; (parse-code '(+ x 3)) ; =&gt; Signals UNKNOWN-LITERAL
+CL-USER&gt; (type-inference-engine:parse-expr
+          '(+ x 3)
+          (list
+           (cons #'integerp 'init/integer)))
+((TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (2)(1)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT X ← (INITIALIZE )&gt;
+                                                   #&lt;TYPE-INFERENCE-ENGINE:STATEMENT RES567 ← (INITIALIZE )&gt;
+                                                   #&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR568 ← (INITIALIZE )&gt;))
+ (TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (0)(2)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR568 ← (INIT/INTEGER )&gt;))
+ (TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (1)(0)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT RES567 ← (+ X
+                                                                                                 #:VAR568)&gt;)))
+</code></pre><p>This function returns a control flow graph which can be passed to <code>infer-types</code>.</p></div></div>
+         <div class="codex-doc-node codex-operator codex-function"><code class="codex-name">compile-function</code><code class="codex-lambda-list">(form fndb top-type &amp;optional literal-initializers)</code><div class="codex-docstring"><p>Infer types for a function defined by the defun form (just like in
+Common Lisp) and add this function to the database if it
+typechecks.</p><p>Example (<code>tie/ex</code> is a local nickname for the package
+<code>type-inference-engine/example</code>):
+</p><pre><code class="lisp">TIE-EXAMPLE&gt; (tie:compile-function
+ '(defun foo (x y)
+   (let ((z (elt x (1+ y))))
+     (* z (+ y z))))
+  tie/ex:*fndb* tie/ex:*type-system*)
+#S(TIE::SIMPLE-KNOWN-FUNCTION
+   :NAME FOO
+   :ARG-TYPES (#&lt;TIE:TYPE-NODE SEQUENCE {102E78D253}&gt;
+               #&lt;TIE:TYPE-NODE INTEGER {102E78D2B3}&gt;)
+   :RES-TYPE #&lt;TIE:TYPE-NODE NUMBER {102E78D313}&gt;)
+</code></pre><p>See also: <code>parse-expr</code>.</p></div></div>
+         <div class="codex-doc-node codex-operator codex-function"><code class="codex-name">result-variable</code><code class="codex-lambda-list">(flat-nodes)</code><div class="codex-docstring">Get the variable in which the result of execution of a program is
+stored.</div></div>
       
    
    <h1 id="type-inference">Type inference</h1>
       
          <div class="codex-doc-node codex-operator codex-function"><code class="codex-name">infer-types</code><code class="codex-lambda-list">(db top graph)</code><div class="codex-docstring">Get the best safe program-wide varible-&gt;type mappings for a control
-flow graph in flat format returned by
-<code>flat-control-flow-graph</code>. <code>Graph</code> is an internal representation
-of an expression in the form of parallel assignment statements.
-<code>Graph</code> can be obtained by firstly creating a control flow graph
-from an expression by calling <code>parse-code</code> and secondly converting
-it to flat format with <code>flat-control-flow-graph</code>. <code>Db</code> is a
-database of known functions and <code>top</code> is the top type of your type
-system. This function returns an array of variable-&gt;type mappings for
-each parallel assignment statement in the flattened control flow
-graph. The first element in that array is the most important as it
-corresponds to a fully evaluated expression.</div></div>
+flow graph in flat format returned by <code>parse-expr</code>. <code>Graph</code> is an
+internal representation of an expression in the form of parallel
+assignment statements.  <code>Db</code> is a database of known functions and
+<code>top</code> is the top type of your type system. This function returns an
+array of variable-&gt;type mappings for each parallel assignment
+statement in the flattened control flow graph. The first element in
+that array is the most important as it corresponds to a fully
+evaluated expression.</div></div>
       
    
 

@@ -63,22 +63,22 @@
   (list
    (cons #'integerp 'init/integer)))
    </code></pre><p>
-   Then call <code>parse-code</code> inside <code>infer-types</code> like this:
-   </p><pre><code class="lisp">(tie:parse-code expression *literals*)
+   Then call <code>parse-expr</code> inside <code>infer-types</code> like this:
+   </p><pre><code class="lisp">(tie:parse-expr expression *literals*)
    </code></pre><p>   Now <code>type-inference-engine</code> understands integer literals:
    </p><pre><code class="lisp">   
 CL-USER&gt; (tie-example:infer-types '(1+ 2))
-#(#((#:VAR613 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10025CC543}&gt;)
-    (#:CONST612 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10025CC543}&gt;))
-  #((#:VAR613 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {10025CC563}&gt;)
-    (#:CONST612 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {10025CC563}&gt;))
-  #((#:VAR613 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {10025CC563}&gt;)
-    (#:CONST612 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {10025CC543}&gt;)))
-((TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (2)(1)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR613 ← (INITIALIZE ) {1016F6DBE3}&gt;
-                                                    #&lt;TYPE-INFERENCE-ENGINE:STATEMENT CONST612 ← (INITIALIZE ) {1016F6DC03}&gt;))
- (TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (0)(2)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT CONST612 ← (INIT/INTEGER ) {1016F6DA33}&gt;))
- (TYPE-INFERENCE-ENGINE::FLAT-CONTROL-NODE (1)(0)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR613 ← (1+ #:CONST612) {1016F6DA93}&gt;)))
-#:VAR613
+#(#((#:RES515 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {100E6E3B43}&gt;)
+    (#:VAR516 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {100E6E3B43}&gt;))
+  #((#:RES515 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {100E6E3BD3}&gt;)
+    (#:VAR516 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {100E6E3BD3}&gt;))
+  #((#:RES515 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE T {100E6E3BD3}&gt;)
+    (#:VAR516 . #&lt;TYPE-INFERENCE-ENGINE:TYPE-NODE INTEGER {100E6E3B43}&gt;)))
+((TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (2)(1)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT RES515 ← (INITIALIZE )&gt;
+                                                   #&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR516 ← (INITIALIZE )&gt;))
+ (TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (0)(2)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT VAR516 ← (INIT/INTEGER )&gt;))
+ (TYPE-INFERENCE-ENGINE:FLAT-CONTROL-NODE (1)(0)(#&lt;TYPE-INFERENCE-ENGINE:STATEMENT RES515 ← (1+ #:VAR516)&gt;)))
+#:RES515
    </code></pre><p>
 </p>
       </div>

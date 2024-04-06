@@ -51,20 +51,21 @@
       <div class="content">
         <p>
    The inference engine infers types for expressions in the following language:
-   </p><pre><code class=NIL>   expression = literal | variable | funcall
+   </p><pre><code class=NIL>   expression = literal | variable | funcall | let
    funcall    = &quot;(&quot; + function + expression* + &quot;)&quot;
    variable   = symbol
    function   = symbol
+   let        = (let (binding+) expression)
+   binding    = (variable expression)
    </code></pre><p>
    Here <code>|</code> means non-ambiguous choice operator, i.e. if an expression is a
    literal, it cannot be a variable of a function call. To determine what is a
    literal and what is not, a sequence of tests is performed on each term before
    it is classified as either a variable or a function call. For more
-   information look at <code>parse-code</code> function in the <a id="api" href="api.html" data-node="api">API</a>
+   information look at <code>parse-expr</code> function in the <a id="api" href="api.html" data-node="api">API</a>
    section. For example, both <code>(+ (sin x)(- y z))</code> and <code>(foo x y (- x y))</code>
    are expressions, but <code>((x y)(y x))</code>, <code>((foo x))</code> and <code>(foo x) y</code> are
-   not (the latter is actualy two correct expressions). <b>NB</b>: There are no
-   special forms as <code>let</code> or <code>if</code> in the language yet.</p><p>   An example provided with this engine in the system
+   not (the latter is actualy two correct expressions).</p><p>   An example provided with this engine in the system
    <code>type-inference-engine/example</code> has the following defined literals:
    </p><ul><li>Integers are all literals recognized by Common Lisp as such
    e.g. <code>1</code>, <code>2</code>, <code>3</code> etc.</li><li>Floats are all literals recognized by Common Lisp as such
@@ -73,11 +74,11 @@
    </p><ul><li><code>1+</code>, <code>1-</code>: Take a numeric argument and return it incremented or
    decremented by 1 (as in Common Lisp).</li><li><code>sin</code>, <code>cos</code>: Take a numeric argument and return its sine or cosine
    (as in Common Lisp).</li><li><code>length</code>: Take a sequence (read the next section if you do not know
-   what it is) and return its length as an integer (as in Common Lisp).</li><li><code>+</code>, <code>-</code>: Add or subtract two numeric arguments and return a
-   number (as in Common Lisp, but these functions are two-args).</li><li><code>floor</code>, <code>ceiling</code>: Take a numeric argument and round it (return an
+   what it is) and return its length as an integer (as in Common Lisp).</li><li><code>+</code>, <code>-</code>, <code>*</code>, <code>/</code>: Arithmetic functions as in Common Lisp, but
+   these functions are two-args.</li><li><code>floor</code>, <code>ceiling</code>: Take a numeric argument and round it (return an
    integer).</li><li><code>elt</code>: Take a sequence and an index (integer) and return an element
    from that sequence.</li><li><code>cons</code>: Constructor for cons cells.</li><li><code>numberp</code>: Take a value and return either <code>T</code>(if the value is a
-   number) or <code>NIL</code>(otherwise).</li><li><code>bool</code>: Take a boolean and any two values <code>x</code> and <code>y</code>. Return the
+   number) or <code>NIL</code>(otherwise).</li><li><code>zerop</code>: Take a number and return either <code>T</code> or <code>NIL</code>.</li><li><code>=</code>: Take two numbers and return either <code>T</code> or <code>NIL</code>.</li><li><code>if</code>: Take a boolean and any two values <code>x</code> and <code>y</code>. Return the
    <code>x</code> if the boolean is <code>T</code> and <code>y</code> otherwise. Note, that this is an
    ordinary function, so it evaluates both <code>x</code> and <code>y</code> before giving a
    result.</li></ul><p>   Unlike Common Lisp, all functions in this language return exactly one
@@ -87,13 +88,13 @@
    actually evaluate <code>x</code> or <code>(sin x)</code>. You do not have to bind <code>x</code> with
    anything. As the last important notice: there is no generalized booleans in
    the example language (but you can redefine this behaviour): the first
-   argument of <code>bool</code><b>must</b> be either <code>T</code> or <code>NIL</code>.</p><p>   An expression is internally represented as a directed graph of parallel
+   argument of <code>if</code><b>must</b> be either <code>T</code> or <code>NIL</code>.</p><p>   An expression is internally represented as a directed graph of parallel
    assignment statements in the following form:
-   \((x_1, x_2, \dots, x_m) \leftarrow (f_1 (y_{1_1}, y_{1_2}, \dots,
-   y_{1_{n_1}}), \dots, f_m (y_{m_1}, y_{m_2}, \dots, y_{m_{n_m}})) \)
+   \((x_1, x_2, \dots, x_m) \leftarrow (f_1 (y_{11}, y_{12}, \dots,
+   y_{1n_1}), \dots, f_m (y_{m1}, y_{m2}, \dots, y_{mn_m})) \)
    That means that a statement contains \(m\) assignments. When a statement is
    executed \(m\) functions from \(f_1\) to \(f_m\) are evaluated with values in
-   corresponding variables \(y_i\) as arguments and their results are assigned to
+   corresponding variables \(y_{ij}\) as arguments and their results are assigned to
    (all distinct) variables \(x_i\). For example an expression <code>(sin (1+ y))</code>
    is transformed in something like following:
    </p><pre><code class=NIL>   1: (y, v1, v2) ← initialize variables with some safe values

@@ -62,91 +62,107 @@
                     (#:tie/ex #:type-inference-engine/example)))
 (in-package :examples)
 
-(tie/ex:infer-types '(+ x (sin y)))
-;; =&gt;
-;; #((Y . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;)
-;;   (#:VAR4955 . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;)
-;;   (X . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;)
-;;   (#:VAR4954 . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;))
-;; #:VAR4955
-;;
-;; The first value is a mapping from variables used in an expression
-;; '(+ x (sin y))(later: the expression) to their corresponding
-;; types. Variables which begin with #:VAR are intermediate variables
-;; which do not appear in the expression explicitly. The second value
-;; is a name of variable which contains the result of evaluation of
-;; the expression. All in all, the output of TIE/EX:INFER-TYPES can be
-;; read as: the expression takes two arguments of type NUMBER and
-;; returns a result of type NUMBER.
+(tie/ex:infer-types '(+ x (sin y))) ;; =&gt;
+((Y . #&lt;TIE:TYPE-NODE NUMBER {10155D1173}&gt;)
+ (#:RES486 . #&lt;TIE:TYPE-NODE NUMBER {10155D1173}&gt;)
+ (X . #&lt;TIE:TYPE-NODE NUMBER {10155D1173}&gt;)
+ (#:VAR487 . #&lt;TIE:TYPE-NODE NUMBER {10155D1173}&gt;))
+#:RES486
+;; The first value is a mapping from variables used in the expression to their
+;; corresponding types. Variables which begin with #:VAR are intermediate
+;; variables which do not appear in the expression explicitly. The second value
+;; is a name of variable which contains the result of evaluation of the
+;; expression. All in all, the output of TIE/EX:INFER-TYPES can be read as: the
+;; expression takes two arguments of type NUMBER and returns a result of type
+;; NUMBER.
 
-(tie/ex:infer-types '(1+ (sin (floor y))))
-;; =&gt;
-;; #((Y . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;)
-;;   (#:VAR4956 . #&lt;TIE:TYPE-NODE INTEGER {10286E6413}&gt;)
-;;   (#:VAR4958 . #&lt;TIE:TYPE-NODE FLOAT {10286E6433}&gt;)
-;;   (#:VAR4957 . #&lt;TIE:TYPE-NODE FLOAT {10286E6433}&gt;))
-;; #:VAR4958
-;;
+(tie/ex:infer-types '(1+ (sin (floor y)))) ;; =&gt;
+((Y . #&lt;TIE:TYPE-NODE NUMBER {10155D1173}&gt;)
+ (#:VAR501 . #&lt;TIE:TYPE-NODE INTEGER {10155D1113}&gt;)
+ (#:RES499 . #&lt;TIE:TYPE-NODE FLOAT {10155D1143}&gt;)
+ (#:VAR500 . #&lt;TIE:TYPE-NODE FLOAT {10155D1143}&gt;))
+#:RES499
 ;; Here Y becomes rounded with FLOOR before SIN is calculated. As a
 ;; result the most narrow type of (SIN (FLOOR Y)) is FLOAT (which is a
 ;; type for real numbers in floating point representation), not NUMBER
 ;; (which is a type for numbers in general). Hence the whole
 ;; expression takes an argument of type NUMBER and returns a FLOAT.
 
-(tie/ex:infer-types '(+ (length y)(- x (floor (elt y x)))))
-;; =&gt;
-;; #((#:VAR4963 . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;)
-;;   (X . #&lt;TIE:TYPE-NODE INTEGER {10286E6413}&gt;)
-;;   (#:VAR4964 . #&lt;TIE:TYPE-NODE INTEGER {10286E6413}&gt;)
-;;   (Y . #&lt;TIE:TYPE-NODE SEQUENCE {1037ADC713}&gt;)
-;;   (#:VAR4966 . #&lt;TIE:TYPE-NODE INTEGER {10286E6413}&gt;)
-;;   (#:VAR4962 . #&lt;TIE:TYPE-NODE INTEGER {10286E6413}&gt;)
-;;   (#:VAR4965 . #&lt;TIE:TYPE-NODE INTEGER {10286E6413}&gt;))
-;; #:VAR4966
-;;
+(tie/ex:infer-types '(+ (length y)(- x (floor (elt y x))))) ;; =&gt;
+((#:VAR517 . #&lt;TIE:TYPE-NODE NUMBER {10155D1173}&gt;)
+ (Y . #&lt;TIE:TYPE-NODE SEQUENCE {10155D10B3}&gt;)
+ (X . #&lt;TIE:TYPE-NODE INTEGER {10155D1113}&gt;)
+ (#:VAR516 . #&lt;TIE:TYPE-NODE INTEGER {10155D1113}&gt;)
+ (#:RES513 . #&lt;TIE:TYPE-NODE INTEGER {10155D1113}&gt;)
+ (#:VAR514 . #&lt;TIE:TYPE-NODE INTEGER {10155D1113}&gt;)
+ (#:VAR515 . #&lt;TIE:TYPE-NODE INTEGER {10155D1113}&gt;))
+#:RES513
 ;; Here the most narrow type for Y is a SEQUENCE (one dimensional array-like
-;; collection). X can only be an INTEGER as it serves a role of an index into
-;; Y in (ELT Y X). The result has a type INTEGER, because both LENGTH and FLOOR
+;; collection). X can only be an INTEGER as it serves a role of an index into Y
+;; in (ELT Y X). The result has a type INTEGER, because both LENGTH and FLOOR
 ;; return an INTEGER.
 
-(tie/ex:infer-types '(+ x (length x)))
-;; =&gt;
-;; #((#:VAR4968 . #&lt;TIE:TYPE-NODE NIL {10286E6313}&gt;)
-;;   (X . #&lt;TIE:TYPE-NODE NIL {10286E6313}&gt;)
-;;   (#:VAR4967 . #&lt;TIE:TYPE-NODE NIL {10286E6313}&gt;))
-;; #:VAR4968
-;;
-;; The expression (+ x (length x)) maps values of type NIL to NIL,
-;; i.e. there are no such values for which the expression can be
-;; evaluated. NIL is a special type so that ∄x: x ∈ NIL. This is
-;; because X cannot be a number and a sequence at the same time.
+(tie/ex:infer-types '(+ x (length x))) ;; =&gt;
+((#:RES530 . #&lt;TIE:TYPE-NODE NIL {10155D0F93}&gt;)
+ (X . #&lt;TIE:TYPE-NODE NIL {10155D0F93}&gt;)
+ (#:VAR531 . #&lt;TIE:TYPE-NODE NIL {10155D0F93}&gt;))
+#:RES530
+;; The expression (+ x (length x)) maps values of type NIL to NIL which is a
+;; special empty type, i.e. there are no such values for which the expression
+;; can be evaluated. This is because X cannot be a number and a sequence at the
+;; same time.
 
-(tie/ex:infer-types '(tie/ex:bool x (1+ (floor y))(sin z)))
-;; =&gt;
-;; #((Z . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;)
-;;   (Y . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;)
-;;   (#:VAR4969 . #&lt;TIE:TYPE-NODE INTEGER {10286E6413}&gt;)
-;;   (#:VAR4972 . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;)
-;;   (X . #&lt;TIE:TYPE-NODE BOOLEAN {1037EFF223}&gt;)
-;;   (#:VAR4970 . #&lt;TIE:TYPE-NODE INTEGER {10286E6413}&gt;)
-;;   (#:VAR4971 . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;))
-;; #:VAR4972
-;;
-;; This expression take a BOOLEAN x and returns a value of type
-;; NUMBER. BOOL function is like IF in Common Lisp with exception that
-;; BOOL evaluates all its arguments.
+(tie/ex:infer-types '(if x (1+ (floor y))(sin z))) ;; =&gt;
+((Y . #&lt;TIE:TYPE-NODE NUMBER {10155D1173}&gt;)
+ (#:VAR549 . #&lt;TIE:TYPE-NODE INTEGER {10155D1113}&gt;)
+ (Z . #&lt;TIE:TYPE-NODE NUMBER {10155D1173}&gt;)
+ (#:RES546 . #&lt;TIE:TYPE-NODE NUMBER {10155D1173}&gt;)
+ (X . #&lt;TIE:TYPE-NODE BOOLEAN {10155D11A3}&gt;)
+ (#:VAR547 . #&lt;TIE:TYPE-NODE INTEGER {10155D1113}&gt;)
+ (#:VAR548 . #&lt;TIE:TYPE-NODE NUMBER {10155D1173}&gt;))
+#:RES546
+;; This expression take a BOOLEAN x and returns a value of type NUMBER. IF is an
+;; ordinary function in this example, i.e. it evaluates all its arguments and
+;; returns either the second or the third argument depending on conditional.
 
-(tie/ex:infer-types '(tie/ex:bool (numberp (1+ x)) 3.2 4))
-;; =&gt;
-;; #((X . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;)
-;;   (#:VAR4973 . #&lt;TIE:TYPE-NODE NUMBER {10286E6453}&gt;)
-;;   (#:VAR4977 . #&lt;TIE:TYPE-NODE FLOAT {10286E6433}&gt;)
-;;   (#:VAR4974 . #&lt;TIE:TYPE-NODE TRUE {1037F5D7B3}&gt;)
-;;   (#:CONST4975 . #&lt;TIE:TYPE-NODE FLOAT {10286E6433}&gt;)
-;;   (#:CONST4976 . #&lt;TIE:TYPE-NODE INTEGER {10286E6413}&gt;))
-;; #:VAR4977
-;;
-;; (1+ X) have to be a number, so the result is of type FLOAT.
+(tie/ex:infer-types '(if (numberp (1+ x)) 3.2 4)) ;; =&gt;
+((X . #&lt;TIE:TYPE-NODE NUMBER {10155D1173}&gt;)
+ (#:VAR565 . #&lt;TIE:TYPE-NODE NUMBER {10155D1173}&gt;)
+ (#:RES561 . #&lt;TIE:TYPE-NODE FLOAT {10155D1143}&gt;)
+ (#:VAR562 . #&lt;TIE:TYPE-NODE TRUE {10155D1023}&gt;)
+ (#:VAR563 . #&lt;TIE:TYPE-NODE FLOAT {10155D1143}&gt;)
+ (#:VAR564 . #&lt;TIE:TYPE-NODE INTEGER {10155D1113}&gt;))
+#:RES561
+;; Here is an example of control flow analysis: (1+ X) is certainly a number, so
+;; the result is of type FLOAT (the value 4 is never returned).
+
+(tie/ex:-&gt; (%fac)(integer integer) integer)
+(tie/ex:compile-function
+ '(defun %fac (acc n)
+   (if (zerop n) acc
+       (%fac (* n acc)(1- n))))) ;; =&gt;
+#S(TIE::SIMPLE-KNOWN-FUNCTION
+   :NAME %FAC
+   :ARG-TYPES (#&lt;TIE:TYPE-NODE INTEGER {10155D1113}&gt;
+               #&lt;TIE:TYPE-NODE INTEGER {10155D1113}&gt;)
+   :RES-TYPE #&lt;TIE:TYPE-NODE INTEGER {10155D1113}&gt;)
+(tie/ex:compile-function
+ '(defun fac (n)(%fac 1 n))) ;; =&gt;
+#S(TIE::SIMPLE-KNOWN-FUNCTION
+   :NAME FAC
+   :ARG-TYPES (#&lt;TIE:TYPE-NODE INTEGER {10155D1113}&gt;)
+   :RES-TYPE #&lt;TIE:TYPE-NODE INTEGER {10155D1113}&gt;)
+(tie/ex:compile-function
+ '(defun c (n m)
+   (/ (fac n)(* (fac m)(fac (- n m)))))) ;; =&gt;
+#S(TIE::SIMPLE-KNOWN-FUNCTION
+   :NAME C
+   :ARG-TYPES (#&lt;TIE:TYPE-NODE INTEGER {10155D1113}&gt;
+               #&lt;TIE:TYPE-NODE INTEGER {10155D1113}&gt;)
+   :RES-TYPE #&lt;TIE:TYPE-NODE FLOAT {10155D1143}&gt;)
+;; Here custom functions FAC (factorial) and C (binomial coefficient) are
+;; created. If you are defining a recursive function, it has to be declared
+;; first (i.e. type-inference-engine works only as a type checker here).
    </code></pre><p>
    For more understanding what is going on here, visit <a id="lang" href="lang.html" data-node="lang">language of
    expressions</a> and <a id="type-system" href="type-system.html" data-node="type-system">type system</a> sections.</p><p>   Reference to the paper: Marc A. Kaplan and Jeffrey D. Ullman. 1978. A general
