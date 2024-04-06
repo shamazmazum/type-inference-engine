@@ -1,8 +1,5 @@
 (in-package :type-inference-engine/example)
 
-;; TODO: Functions like FLOOR (?), CEILING (?)
-;; and maybe other can be simplified to use SBCL-like DEFKNOWN.
-
 ;; NB: The bottom node must have the name NIL
 (defparameter *type-system*
   (let* ((bottom   (tie:type-node nil "Bottom type. No value belongs to this type" nil))
@@ -195,7 +192,6 @@
 
 
 ;; Literals
-
 (tie:definitializer *fndb* *type-system* init/integer integer)
 (tie:definitializer *fndb* *type-system* init/float   float)
 (tie:definitializer *fndb* *type-system* init/null    null)
@@ -230,11 +226,10 @@ functions for variables (vals).")
 (defun infer-types (expression)
   "Infer types in the expression using a top type system and function
 database."
-  (multiple-value-bind (nodes result-variable)
-      (tie:parse-code expression *literal-initializers*)
+  (let ((nodes (tie:parse-expr expression *literal-initializers*)))
     (values
-     (elt (tie:infer-types *fndb* *type-system* nodes) 0)
-     result-variable)))
+     (tie:s/f-node-mappings (tie:infer-types *fndb* *type-system* nodes))
+     (tie:result-variable nodes))))
 
 (defun compile-function (form)
   (tie:compile-function form *fndb* *type-system* *literal-initializers*))

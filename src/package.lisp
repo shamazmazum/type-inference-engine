@@ -51,7 +51,9 @@
    ;; Control flow & inference across statements
    #:var->type
    #:vars->types
-   #:parse-code
+   #:parse-expr
+   #:parse-defun
+   #:result-variable
    #:statement
    #:statement-assigns-to
    #:statement-function
@@ -65,6 +67,7 @@
 
    ;; Global inference
    #:infer-types
+   #:s/f-node-mappings
 
    ;; Side-effects of compilation
    #:compile-function

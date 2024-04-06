@@ -9,10 +9,11 @@
 (sera:-> compile-function (list hash-table type-node &optional list)
          (values simple-known-function &optional))
 (defun compile-function (form fndb top-type &optional literal-initializers)
-  (multiple-value-bind (nodes name parameters result-variable)
+  (multiple-value-bind (nodes name parameters)
       (parse-defun fndb top-type form literal-initializers)
     (let* ((mappings (s/f-node-mappings
-                      (infer-types fndb top-type (ir-nodes->flat-nodes nodes))))
+                      (infer-types fndb top-type nodes)))
+           (result-variable (result-variable nodes))
            (actual-argtypes (mapcar (alex:curry #'alex:assoc-value mappings) parameters))
            (actual-restype (alex:assoc-value mappings result-variable)))
 

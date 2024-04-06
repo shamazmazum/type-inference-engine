@@ -162,7 +162,7 @@ transfers control to a node labeled with @c(sf-label)."
                variables))
      nodes)))
 
-(defun parse-expr (expr &optional literal-initializers)
+(defun parse-expr-to-ir (expr &optional literal-initializers)
   "Parse an expression (nested function calls) to intermediate representation"
   (let* ((expanded-expr (expand-expression expr literal-initializers))
          (expr-groups (group-by-depth (assign-depth expanded-expr)))
@@ -194,7 +194,7 @@ transfers control to a node labeled with @c(sf-label)."
                 (if initializer (cons parameter initializer))))
             parameters (simple-known-function-arg-types entry))))))
 
-(defun parse-defun (db top form &optional literal-initializers)
+(defun parse-defun-to-ir (db top form &optional literal-initializers)
   "Parse definition of a new function to intermediate representation"
   (unless (= (length form) 4)
     (error 'malformed-defun :code form))
@@ -208,14 +208,11 @@ transfers control to a node labeled with @c(sf-label)."
            (variable-mappings (allocate-variables expr-groups))
            (statement-groups (convert-to-statements expr-groups variable-mappings))
            (sf-label (gensym "S/F"))
-           (ir-nodes (ir-nodes statement-groups sf-label))
-           (last-statement-group (ir-node-statements (car (last ir-nodes)))))
-      (assert (= (length last-statement-group) 1))
+           (ir-nodes (ir-nodes statement-groups sf-label)))
       (values
        (add-sf-node ir-nodes (append parameters (mapcar #'cdr variable-mappings))
                     sf-label initializers)
-       name parameters
-       (statement-assigns-to (first last-statement-group))))))
+       name parameters))))
 
 ;; A structure to represent a control flow graph as a flat list
 (sera:defconstructor flat-control-node
@@ -253,10 +250,18 @@ transfers control to a node labeled with @c(sf-label)."
       (ir-node-statements node)))
    ir-nodes))
 
-;; TODO: Add support for special forms like if and goto
-(sera:-> parse-code (t &optional list)
-         (values list symbol &optional))
-(defun parse-code (code &optional literal-initializers)
+(sera:-> parse-defun (hash-table type-node list &optional list)
+         (values list symbol list &optional))
+(defun parse-defun (db top form &optional literal-initializers)
+  "Parse definition of a new function to a model acceptable by INFER-TYPES."
+  (multiple-value-bind (ir-nodes name parameters)
+      (parse-defun-to-ir db top form literal-initializers)
+    (values (ir-nodes->flat-nodes ir-nodes)
+            name parameters)))
+
+(sera:-> parse-expr (t &optional list)
+         (values list &optional))
+(defun parse-expr (code &optional literal-initializers)
   "Parse an expression @c(code) and construct a control flow
 graph. @c(Literal-initializers) is an associative list which contains
 predicates as keys and initializer functions as values. When
@@ -279,12 +284,8 @@ constant variable with a value of type of the literal. For example:
 This function returns a control flow graph and the name of a variable
 where the result of expression is stored after evaluation of a
 statement."
-  (let ((ir-nodes (parse-expr code literal-initializers)))
-    (values
-     (ir-nodes->flat-nodes ir-nodes)
-     (let ((statements (ir-node-statements (car (last ir-nodes)))))
-       (assert (= (length statements) 1))
-       (statement-assigns-to (first statements))))))
+  (let ((ir-nodes (parse-expr-to-ir code literal-initializers)))
+    (ir-nodes->flat-nodes ir-nodes)))
 
 (sera:-> program-variables (list)
          (values list &optional))
@@ -300,3 +301,11 @@ statement."
                           :initial-value nil))
            :initial-value nil)
    :test #'eq))
+
+(sera:-> result-variable (list)
+         (values symbol &optional))
+(defun result-variable (flat-nodes)
+  (let ((last-statement-group (flat-control-node-statements
+                               (car (last flat-nodes)))))
+    (assert (= (length last-statement-group) 1))
+    (statement-assigns-to (first last-statement-group))))
